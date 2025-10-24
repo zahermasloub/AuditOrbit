@@ -6,6 +6,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 import DataTable from "../../components/table/DataTable";
 import { apiFetch } from "../../lib/apiFetch";
@@ -57,7 +58,19 @@ export default function EngagementsPage() {
     { header: "العنوان / Title", accessorKey: "title" },
     { header: "الحالة / Status", accessorKey: "status" },
     { header: "المخاطر / Risk", accessorKey: "risk_rating" },
-    { header: "تاريخ الإنشاء / Created", accessorKey: "created_at" },
+    {
+      header: "تاريخ الإنشاء / Created",
+      accessorKey: "created_at",
+      cell: ({ getValue }) => {
+        const value = getValue<string | null>();
+        if (!value) return "—";
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) {
+          return value;
+        }
+        return format(parsed, "yyyy-MM-dd");
+      },
+    },
   ];
 
   const {
