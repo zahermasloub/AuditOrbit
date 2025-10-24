@@ -43,6 +43,9 @@ export default function AdminHome() {
         <Link className="px-4 py-2 rounded-xl border" href="/admin/reports">
           التقارير / Reports
         </Link>
+        <Link className="px-4 py-2 rounded-xl border" href="/manager">
+          مساحة المدير / IA Manager
+        </Link>
       </nav>
     </div>
   );
