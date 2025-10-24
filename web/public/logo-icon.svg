@@ -1,0 +1,15 @@
+<!-- AuditOrbit — Icon Only (Monochrome, currentColor) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">AuditOrbit — Internal Audit Icon</title>
+  <desc id="desc">Minimal shield with an orbit dot and a checkmark inside, symbolizing governance and continuous assurance.</desc>
+  <defs>
+    <symbol id="icon" viewBox="0 0 256 256">
+      <g fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M128 24c-28 20-56 26-84 28v56c0 36 20 69 50 89l34 22 34-22c30-20 50-53 50-89V52c-28-2-56-8-84-28z"/>
+        <path d="M76 122l38 38 66-66"/>
+        <circle cx="196" cy="84" r="10" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+  </defs>
+  <use href="#icon" />
+</svg>

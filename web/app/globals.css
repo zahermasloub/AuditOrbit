@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Logo color control via currentColor */
+.logo { color: #0EA5E9; }
+.dark .logo { color: #E5E7EB; }
+
+/* Base layout paddings and focus ring for a11y */
+:root { color-scheme: light dark; }
+* { outline-color: #0EA5E9; }

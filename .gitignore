@@ -1,0 +1,11 @@
+# Node
+web/node_modules/
+web/.next/
+web/public/.dev.css
+
+# Python
+__pycache__/
+*.pyc
+
+# Env
+.env
