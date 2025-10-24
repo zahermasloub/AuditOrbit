@@ -70,6 +70,28 @@ export default function EvidencePage() {
     }
   };
 
+  const doDownload = async (evidenceId: string) => {
+    try {
+      const { url } = await apiFetch<{ url: string }>(`/evidence/${evidenceId}/download`);
+      window.open(url, "_blank");
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Download failed. Please try again.");
+    }
+  };
+
+  const doDelete = async (evidenceId: string) => {
+    const confirmed = window.confirm("تأكيد الحذف؟");
+    if (!confirmed) return;
+    try {
+      await apiFetch(`/evidence/${evidenceId}`, { method: "DELETE" });
+      await refetch();
+    } catch (error) {
+      console.error("Delete failed:", error);
+      alert("Delete failed. Please try again.");
+    }
+  };
+
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-bold">الأدلة / Evidence</h1>
@@ -105,6 +127,7 @@ export default function EvidencePage() {
                 <th className="px-3 py-2 text-left">Size</th>
                 <th className="px-3 py-2 text-left">Status</th>
                 <th className="px-3 py-2 text-left">Created</th>
+                <th className="px-3 py-2 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -117,6 +140,22 @@ export default function EvidencePage() {
                   </td>
                   <td className="px-3 py-2">{ev.status}</td>
                   <td className="px-3 py-2">{ev.created_at}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex gap-2">
+                      <button
+                        className="rounded-lg border px-2 py-1"
+                        onClick={() => doDownload(ev.id)}
+                      >
+                        Download
+                      </button>
+                      <button
+                        className="rounded-lg border px-2 py-1"
+                        onClick={() => doDelete(ev.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

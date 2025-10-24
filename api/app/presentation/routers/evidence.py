@@ -15,7 +15,8 @@ from ...application.dtos.evidence import (
 from ...infrastructure.db.session import SessionLocal
 from ...infrastructure.security.jwt import try_get_user_id
 from ...infrastructure.security.rbac import enforce
-from ...infrastructure.storage.s3 import presign_put
+from ...infrastructure.storage.delete import delete_object
+from ...infrastructure.storage.s3 import presign_get, presign_put
 
 router = APIRouter()
 _BUCKET = os.getenv("S3_BUCKET", "auditorbit")
@@ -171,3 +172,44 @@ def confirm_upload(
   if row is None:
     raise HTTPException(status_code=404, detail="Evidence not found")
   return EvidenceOut(**dict(row))
+
+
+@router.get("/{evidence_id}/download")
+def get_download_url(
+  evidence_id: str,
+  db: Session = Depends(get_db),
+  user_id: str = Depends(current_user_id),
+) -> dict[str, str]:
+  enforce(db, user_id, "evidence", "read")
+
+  record = db.execute(
+    text("SELECT bucket, object_key FROM evidence WHERE id = :id"),
+    {"id": evidence_id},
+  ).mappings().first()
+  if record is None:
+    raise HTTPException(status_code=404, detail="Evidence not found")
+
+  url = presign_get(record["bucket"], record["object_key"])
+  return {"url": url}
+
+
+@router.delete("/{evidence_id}")
+def delete_evidence(
+  evidence_id: str,
+  db: Session = Depends(get_db),
+  user_id: str = Depends(current_user_id),
+) -> dict[str, bool]:
+  enforce(db, user_id, "evidence", "delete")
+
+  record = db.execute(
+    text("SELECT bucket, object_key FROM evidence WHERE id = :id"),
+    {"id": evidence_id},
+  ).mappings().first()
+  if record is None:
+    raise HTTPException(status_code=404, detail="Evidence not found")
+
+  delete_object(record["bucket"], record["object_key"])
+
+  db.execute(text("DELETE FROM evidence WHERE id = :id"), {"id": evidence_id})
+  db.commit()
+  return {"ok": True}
