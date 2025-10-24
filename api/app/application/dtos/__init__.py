@@ -1,3 +1,4 @@
+from .ai_compare import FindingOut, RegulationChunkIn, RegulationIn, ScenarioIn
 from .auth import LoginIn, TokenOut
 from .checklists import (
 	ChecklistCreate,
@@ -27,8 +28,12 @@ __all__ = [
 	"ChecklistWithItemsOut",
 	"DispatchIn",
 	"EngagementChecklistOut",
-		"EvidenceInitIn",
-		"EvidenceInitOut",
-		"EvidenceConfirmIn",
-		"EvidenceOut",
+	"EvidenceInitIn",
+	"EvidenceInitOut",
+	"EvidenceConfirmIn",
+	"EvidenceOut",
+	"RegulationIn",
+	"RegulationChunkIn",
+	"ScenarioIn",
+	"FindingOut",
 ]

@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 
 if (-not $env:GIT_BRANCH) { $env:GIT_BRANCH = "master" }
 if (-not $env:GIT_AUTHOR_NAME) { $env:GIT_AUTHOR_NAME = "AuditOrbit Bot" }
-if (-not $env:GIT_AUTHOR_EMAIL) { $env:GIT_AUTHOR_EMAIL = "bot@auditorbit.local" }
+if (-not $env:GIT_AUTHOR_EMAIL) { $env:GIT_AUTHOR_EMAIL = "crc.qa2222@gmail.com" }
 
 git rev-parse --is-inside-work-tree | Out-Null
 

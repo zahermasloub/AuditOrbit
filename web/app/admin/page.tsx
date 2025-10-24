@@ -37,6 +37,9 @@ export default function AdminHome() {
         <Link className="px-4 py-2 rounded-xl border" href="/admin/evidence">
           الأدلة / Evidence
         </Link>
+        <Link className="px-4 py-2 rounded-xl border" href="/admin/ai-lab">
+          AI Lab
+        </Link>
       </nav>
     </div>
   );

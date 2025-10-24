@@ -5,7 +5,7 @@ import tempfile
 from sqlalchemy import text as sql_text
 
 from .db import SessionLocal, insert_extraction
-from .normalize import to_uniform_json
+from .normalize import enrich_with_entities, to_uniform_json
 from .ocr import extract_pdf_text, is_scanned_pdf, ocr_image_to_text, ocr_pdf_to_text
 from .storage import s3_client
 
@@ -45,7 +45,7 @@ def extract_evidence(evidence_id: str) -> dict[str, object]:
           blob = handle.read()
         text, confidence = ocr_image_to_text(blob)
 
-      payload = to_uniform_json(str(record["id"]), text, source_type)
+      payload = enrich_with_entities(to_uniform_json(str(record["id"]), text, source_type))
       insert_extraction(session, evidence_id, payload, source_type, confidence)
       session.execute(sql_text("UPDATE evidence SET status = 'ready' WHERE id = :id"), {"id": evidence_id})
       session.commit()
