@@ -55,13 +55,13 @@ def upgrade() -> None:
   op.execute(
     """
     INSERT INTO users (email, name, hashed_password)
-    VALUES ('admin@auditorbit.local', 'Admin', crypt('Admin#2025', gen_salt('bf')));
+    VALUES ('admin@example.com', 'Admin', crypt('Admin#2025', gen_salt('bf')));
     """
   )
   op.execute(
     """
     INSERT INTO user_roles(user_id, role_id)
-    SELECT id, 1 FROM users WHERE email = 'admin@auditorbit.local';
+    SELECT id, 1 FROM users WHERE email = 'admin@example.com';
     """
   )
 
@@ -71,4 +71,4 @@ def downgrade() -> None:
   op.execute("DELETE FROM role_permissions;")
   op.execute("DELETE FROM permissions;")
   op.execute("DELETE FROM roles;")
-  op.execute("DELETE FROM users WHERE email = 'admin@auditorbit.local';")
+  op.execute("DELETE FROM users WHERE email = 'admin@example.com';")

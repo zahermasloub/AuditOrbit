@@ -44,6 +44,11 @@ export default function SignInPage() {
   return (
     <section className="max-w-md mx-auto bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow space-y-4">
       <h1 className="text-xl font-bold">تسجيل الدخول / Sign in</h1>
+      <div className="text-xs bg-blue-50 dark:bg-blue-950 p-3 rounded border border-blue-200 dark:border-blue-800">
+        <p className="font-semibold mb-1">معلومات الدخول التجريبية:</p>
+        <p>Email: <code className="bg-white dark:bg-neutral-800 px-1 rounded">admin@example.com</code></p>
+        <p>Password: <code className="bg-white dark:bg-neutral-800 px-1 rounded">Admin#2025</code></p>
+      </div>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
         <div>
           <input
