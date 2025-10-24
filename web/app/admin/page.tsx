@@ -31,6 +31,9 @@ export default function AdminHome() {
         <Link className="px-4 py-2 rounded-xl border" href="/admin/engagements">
           المهام / Engagements
         </Link>
+        <Link className="px-4 py-2 rounded-xl border" href="/admin/checklists">
+          القوائم / Checklists
+        </Link>
       </nav>
     </div>
   );
