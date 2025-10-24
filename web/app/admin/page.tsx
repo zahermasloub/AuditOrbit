@@ -1,15 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
 export default function AdminHome() {
-  const [token, setToken] = useState<string | null>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("token");
-    setToken(stored);
-  }, []);
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   if (!token) {
     return (
@@ -27,10 +21,14 @@ export default function AdminHome() {
   return (
     <div className="p-6 space-y-4">
       <h1 className="text-2xl font-bold">لوحة الإدارة / Admin</h1>
-      <ul className="list-disc ps-6 space-y-1">
-        <li>المستخدمون / Users</li>
-        <li>الأدوار / Roles</li>
-      </ul>
+      <nav className="flex gap-3">
+        <Link className="px-4 py-2 rounded-xl border" href="/admin/users">
+          المستخدمون / Users
+        </Link>
+        <Link className="px-4 py-2 rounded-xl border" href="/admin/roles">
+          الأدوار / Roles
+        </Link>
+      </nav>
     </div>
   );
 }
