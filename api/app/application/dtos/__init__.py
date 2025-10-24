@@ -15,6 +15,13 @@ from .evidence import (
 	EvidenceOut,
 )
 from .users import PageOut, UserCreate, UserOut
+from .reports import (
+	ReportActionOut,
+	ReportCreateIn,
+	ReportOut,
+	ReportUpdateIn,
+	ReportsPage,
+)
 
 __all__ = [
 	"LoginIn",
@@ -36,4 +43,9 @@ __all__ = [
 	"RegulationChunkIn",
 	"ScenarioIn",
 	"FindingOut",
+	"ReportCreateIn",
+	"ReportUpdateIn",
+	"ReportOut",
+	"ReportActionOut",
+	"ReportsPage",
 ]

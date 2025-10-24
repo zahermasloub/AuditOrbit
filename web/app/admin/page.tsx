@@ -40,6 +40,9 @@ export default function AdminHome() {
         <Link className="px-4 py-2 rounded-xl border" href="/admin/ai-lab">
           AI Lab
         </Link>
+        <Link className="px-4 py-2 rounded-xl border" href="/admin/reports">
+          التقارير / Reports
+        </Link>
       </nav>
     </div>
   );
