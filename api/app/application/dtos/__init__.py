@@ -7,6 +7,12 @@ from .checklists import (
 	DispatchIn,
 	EngagementChecklistOut,
 )
+from .evidence import (
+	EvidenceConfirmIn,
+	EvidenceInitIn,
+	EvidenceInitOut,
+	EvidenceOut,
+)
 from .users import PageOut, UserCreate, UserOut
 
 __all__ = [
@@ -21,4 +27,8 @@ __all__ = [
 	"ChecklistWithItemsOut",
 	"DispatchIn",
 	"EngagementChecklistOut",
+		"EvidenceInitIn",
+		"EvidenceInitOut",
+		"EvidenceConfirmIn",
+		"EvidenceOut",
 ]
