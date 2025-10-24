@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 
 import { apiFetch } from "../../lib/apiFetch";
 
@@ -25,7 +25,6 @@ export default function EvidencePage() {
   const [engagementId, setEngagementId] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const queryClient = useQueryClient();
 
   const { data, refetch, isFetching } = useQuery<Evidence[]>({
     queryKey: ["evidence", engagementId],
