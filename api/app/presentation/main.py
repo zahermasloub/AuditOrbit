@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..middlewares.audit import audit_log_middleware
-from .routers import auth, checklists, engagements, evidence, roles, users
+from .routers import ai, auth, checklists, engagements, evidence, roles, users
 
 app = FastAPI(title="AuditOrbit API", version="0.2.0", docs_url="/docs", redoc_url="/redoc")
 app.middleware("http")(audit_log_middleware)
@@ -25,6 +25,7 @@ app.include_router(roles.router, prefix="/roles", tags=["roles"])
 app.include_router(engagements.router, prefix="/engagements", tags=["engagements"])
 app.include_router(checklists.router, prefix="/checklists", tags=["checklists"])
 app.include_router(evidence.router, prefix="/evidence", tags=["evidence"])
+app.include_router(ai.router, prefix="/ai", tags=["ai"])
 
 
 @app.get("/health", tags=["ops"])

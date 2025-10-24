@@ -2,7 +2,7 @@ from typing import Generator
 import os
 import uuid
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -39,28 +39,48 @@ def current_user_id(authorization: str = Header(default=None, convert_underscore
 
 @router.get("", response_model=list[EvidenceOut])
 def list_evidence(
-  engagement_id: str = Query(...),
+  engagement_id: str | None = None,
   db: Session = Depends(get_db),
   user_id: str = Depends(current_user_id),
 ) -> list[EvidenceOut]:
   enforce(db, user_id, "evidence", "read")
-  rows = db.execute(
-    text(
-      """
-        SELECT
-          id::text AS id,
-          filename,
-          mime_type,
-          size_bytes,
-          status,
-          to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
-        FROM evidence
-        WHERE engagement_id = :engagement_id
-        ORDER BY created_at DESC
-      """
-    ),
-    {"engagement_id": engagement_id},
-  ).mappings()
+  
+  if engagement_id:
+    rows = db.execute(
+      text(
+        """
+          SELECT
+            id::text AS id,
+            filename,
+            mime_type,
+            size_bytes,
+            status,
+            to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
+          FROM evidence
+          WHERE engagement_id = :engagement_id
+          ORDER BY created_at DESC
+        """
+      ),
+      {"engagement_id": engagement_id},
+    ).mappings()
+  else:
+    rows = db.execute(
+      text(
+        """
+          SELECT
+            id::text AS id,
+            filename,
+            mime_type,
+            size_bytes,
+            status,
+            to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
+          FROM evidence
+          ORDER BY created_at DESC
+          LIMIT 100
+        """
+      )
+    ).mappings()
+  
   return [EvidenceOut(**dict(row)) for row in rows]
 
 
