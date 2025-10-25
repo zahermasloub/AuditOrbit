@@ -49,6 +49,12 @@ export default function AdminHome() {
         <Link className="px-4 py-2 rounded-xl border bg-blue-50 border-blue-300" href="/auditor">
           مساحة المراجع / Auditor Workspace
         </Link>
+        <Link className="px-4 py-2 rounded-xl border" href="/admin/notifications">
+          الإشعارات / Notifications
+        </Link>
+        <Link className="px-4 py-2 rounded-xl border" href="/admin/audit-log">
+          سجل التدقيق / Audit Log
+        </Link>
       </nav>
     </div>
   );
