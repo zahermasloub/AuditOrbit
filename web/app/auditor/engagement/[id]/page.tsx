@@ -1,9 +1,9 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import apiFetch from "@/lib/apiFetch";
+import { apiFetch } from "@/app/lib/apiFetch";
 
 interface Checklist {
   id: string;

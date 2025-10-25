@@ -1,0 +1,218 @@
+{
+  "$schema": "https://schemas.audit-orbit.local/components-manifest.schema.json",
+  "meta": {
+    "version": "1.0.0",
+    "framework": "Next.js 14 + React 18 + Tailwind + Radix"
+  },
+  "components": [
+    {
+      "name": "AppShell",
+      "description": "Top navbar + collapsible sidebar + right stepper region with responsive breakpoints and RTL/LTR awareness.",
+      "props": {
+        "sidebarItems": "NavItem[]",
+        "user": "{ name: string; role: 'Manager'|'Auditor'|'Admin' }",
+        "breadcrumbs": "BreadcrumbItem[]",
+        "dir": "'rtl'|'ltr'",
+        "onToggleSidebar": "(open:boolean)=>void"
+      },
+      "states": [
+        "sidebarOpen",
+        "isMobile",
+        "dir"
+      ],
+      "events": [
+        "onToggleSidebar"
+      ],
+      "aria": {
+        "role": "application",
+        "landmarks": [
+          "header",
+          "navigation",
+          "main",
+          "complementary"
+        ]
+      }
+    },
+    {
+      "name": "RightStepper",
+      "description": "Linear stepper used across Dashboard/Engagements to show audit phases.",
+      "props": {
+        "steps": "Array<{id:string;label:string;status:'pending'|'active'|'done'|'blocked'}>",
+        "currentStepId": "string",
+        "onStepClick": "(id:string)=>void",
+        "reversedInRTL": "boolean"
+      },
+      "states": [
+        "active",
+        "done",
+        "blocked",
+        "hover",
+        "focus"
+      ],
+      "events": [
+        "onStepClick"
+      ],
+      "aria": {
+        "role": "list",
+        "orientation": "vertical"
+      }
+    },
+    {
+      "name": "DataTable",
+      "description": "Headless TanStack Table wrapper with toolbar (search/filter/export/columns) and A11y roles.",
+      "props": {
+        "columns": "ColumnDef<T>[]",
+        "data": "T[]",
+        "pageSize": "number",
+        "onRowClick": "(row:T)=>void",
+        "toolbar": "{search?:boolean;filters?:FilterDef[];exportCsv?:boolean;columnVisibility?:boolean}"
+      },
+      "states": [
+        "loading",
+        "error",
+        "empty",
+        "rowSelected"
+      ],
+      "events": [
+        "onRowClick",
+        "onExport",
+        "onFilterChange"
+      ],
+      "aria": {
+        "role": "table",
+        "rowRole": "row",
+        "cellRole": "cell"
+      }
+    },
+    {
+      "name": "FileDropzone",
+      "description": "S3 presign-ready dropzone with Uppy/Tus integration and progress.",
+      "props": {
+        "accept": "string[]",
+        "maxSizeMB": "number",
+        "destination": "{ type:'s3'|'minio'; bucket:string; prefix?:string }",
+        "strategy": "'multipart'|'tus'",
+        "onUploaded": "(fileMeta)=>void"
+      },
+      "states": [
+        "dragOver",
+        "uploading",
+        "error",
+        "paused",
+        "complete"
+      ],
+      "events": [
+        "onUploaded",
+        "onError",
+        "onPause",
+        "onResume"
+      ],
+      "aria": {
+        "role": "group",
+        "labelledby": "id-of-label"
+      }
+    },
+    {
+      "name": "FormField",
+      "description": "RHF + Zod wired field (label/help/error) with ARIA mapping.",
+      "props": {
+        "name": "string",
+        "label": "string",
+        "description": "string",
+        "required": "boolean",
+        "children": "ReactNode"
+      },
+      "states": [
+        "invalid",
+        "disabled",
+        "readonly",
+        "focused"
+      ],
+      "events": [],
+      "aria": {
+        "role": "group",
+        "describedby": "id-of-help"
+      }
+    },
+    {
+      "name": "KpiCard",
+      "description": "Metric with delta and sparkline.",
+      "props": {
+        "title": "string",
+        "value": "string|number",
+        "delta": "number",
+        "trend": "Array<{x:string|number;y:number}>"
+      },
+      "states": [
+        "neutral",
+        "up",
+        "down"
+      ],
+      "events": [],
+      "aria": {
+        "role": "region"
+      }
+    },
+    {
+      "name": "ProgressRadial",
+      "description": "Circular progress with center label.",
+      "props": {
+        "value": "number",
+        "size": "number",
+        "label": "string"
+      },
+      "states": [
+        "indeterminate"
+      ],
+      "events": [],
+      "aria": {
+        "role": "img",
+        "label": "progress"
+      }
+    },
+    {
+      "name": "Modal",
+      "description": "Radix Dialog wrapper with Confirm pattern.",
+      "props": {
+        "title": "string",
+        "open": "boolean",
+        "onOpenChange": "(o:boolean)=>void",
+        "footerActions": "ActionButton[]"
+      },
+      "states": [
+        "open",
+        "closed",
+        "loading"
+      ],
+      "events": [
+        "onConfirm",
+        "onCancel"
+      ],
+      "aria": {
+        "role": "dialog",
+        "aria-modal": "true"
+      }
+    },
+    {
+      "name": "DateRangePicker",
+      "description": "Preset chips (30/60/90) + calendar popover, RTL aware.",
+      "props": {
+        "value": "{from:Date;to:Date}",
+        "onChange": "(v)=>void",
+        "presets": "Preset[]"
+      },
+      "states": [
+        "open",
+        "closed",
+        "hover",
+        "focus"
+      ],
+      "events": [
+        "onChange"
+      ],
+      "aria": {
+        "role": "group"
+      }
+    }
+  ]
+}
