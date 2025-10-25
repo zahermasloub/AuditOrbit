@@ -1,130 +1,186 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import DataTable from "../../components/table/DataTable";
-import { apiFetch } from "../../lib/apiFetch";
+import { DataTable, type DataTableColumn } from "@/app/components/table/DataTable";
+import { DataTableToolbar } from "@/app/components/table/DataTableToolbar";
+import { StatusBadge } from "@/app/components/ui/StatusBadge";
+import { Button } from "@/app/components/ui/Button";
+import { Input } from "@/app/components/ui/Input";
+import { Modal } from "@/app/components/ui/Modal";
+import { apiFetch } from "@/app/lib/apiFetch";
 
 type User = {
   id: string;
   email: string;
   name: string;
-  locale: string;
-  tz: string;
-  active: boolean;
+  role?: string | null;
+  status?: string | null;
+  active?: boolean;
+  created_at?: string | null;
 };
 
-type Page<T> = { items: T[]; page: number; size: number; total: number };
+type UsersResponse = {
+  items?: User[];
+};
 
-const Schema = z.object({
-  email: z.string().email("بريد غير صالح"),
-  name: z.string().min(2, "الاسم قصير"),
-  password: z.string().min(8, "كلمة المرور ≥ 8"),
-});
-
-type FormData = z.infer<typeof Schema>;
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
+}
 
 export default function UsersPage() {
-  const [page, setPage] = useState(1);
-  const size = 10;
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ email: "", name: "", password: "" });
   const queryClient = useQueryClient();
 
-  const { data, isLoading, error } = useQuery<Page<User>>({
-    queryKey: ["users", page, size],
-    queryFn: () => apiFetch<Page<User>>(`/users?page=${page}&size=${size}`),
-    placeholderData: (previous) => previous,
+  const { data, isLoading, isError } = useQuery<User[]>({
+    queryKey: ["admin-users", search],
+    queryFn: async () => {
+      const response = await apiFetch<UsersResponse>(
+        `/users?page=1&size=200&search=${encodeURIComponent(search)}`,
+      );
+      return response.items ?? [];
+    },
+    staleTime: 60_000,
   });
 
-  const columns: ColumnDef<User>[] = [
-    { header: "البريد / Email", accessorKey: "email" },
-    { header: "الاسم / Name", accessorKey: "name" },
-    {
-      header: "الحالة / Active",
-      accessorKey: "active",
-      cell: ({ getValue }) => (getValue<boolean>() ? "فعال" : "موقوف"),
-    },
-  ];
+  const rows = useMemo(() => {
+    return (data ?? []).map((user: User) => ({
+      ...user,
+      status: user.status ?? (user.active === false ? "inactive" : "active"),
+    }));
+  }, [data]);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(Schema) });
+  const columns = useMemo<DataTableColumn<User>[]>(
+    () => [
+      { header: "الاسم", accessorKey: "name" },
+      { header: "البريد", accessorKey: "email" },
+      { header: "الدور", accessorKey: "role" },
+      {
+        header: "الحالة",
+        accessorKey: "status",
+        cell: ({ row }) => <StatusBadge value={row.status ?? "active"} />,
+      },
+      {
+        header: "أُنشئ",
+        accessorKey: "created_at",
+        cell: ({ row }) => formatDate(row.created_at),
+      },
+    ],
+    [],
+  );
 
-  const onCreate = async (values: FormData) => {
-    await apiFetch<User>("/users", { method: "POST", body: JSON.stringify(values) });
-    reset();
-    await queryClient.invalidateQueries({ queryKey: ["users"] });
+  const resetModal = () => {
+    setForm({ email: "", name: "", password: "" });
   };
 
-  if (isLoading) return <p>جارِ التحميل…</p>;
-  if (error) return <p className="text-red-600">خطأ في الجلب</p>;
+  const createUser = useMutation({
+    mutationFn: async ({ email, name, password }: { email: string; name: string; password: string }) => {
+      return apiFetch<User>("/users", {
+        method: "POST",
+        body: JSON.stringify({ email, name, password }),
+      });
+    },
+    onSuccess: async () => {
+      resetModal();
+      setOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+
+  const handleCreate = () => {
+    const email = form.email.trim();
+    const name = form.name.trim();
+    const password = form.password;
+    if (!email || !password) return;
+    createUser.mutate({ email, name, password });
+  };
 
   return (
-    <section className="space-y-5">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-2xl font-bold">المستخدمون / Users</h1>
-        <form
-          onSubmit={handleSubmit(onCreate)}
-          className="flex gap-2 items-start bg-white dark:bg-neutral-900 p-3 rounded-2xl border"
-        >
-          <div className="flex flex-col gap-1">
-            <input
-              className="border rounded-xl p-2"
-              placeholder="Email"
-              {...register("email")}
-              aria-invalid={!!errors.email}
-            />
-            {errors.email && <span className="text-xs text-red-600">{errors.email.message}</span>}
-          </div>
-          <div className="flex flex-col gap-1">
-            <input
-              className="border rounded-xl p-2"
-              placeholder="Name"
-              {...register("name")}
-              aria-invalid={!!errors.name}
-            />
-            {errors.name && <span className="text-xs text-red-600">{errors.name.message}</span>}
-          </div>
-          <div className="flex flex-col gap-1">
-            <input
-              className="border rounded-xl p-2"
-              placeholder="Password"
-              type="password"
-              {...register("password")}
-              aria-invalid={!!errors.password}
-            />
-            {errors.password && <span className="text-xs text-red-600">{errors.password.message}</span>}
-          </div>
-          <button disabled={isSubmitting} className="px-3 py-2 rounded-xl bg-black text-white" type="submit">
-            {isSubmitting ? "…" : "إنشاء / Create"}
-          </button>
-        </form>
-      </div>
-      <DataTable data={data?.items ?? []} columns={columns} />
-      <div className="flex items-center justify-end gap-2">
-        <button
-          className="px-3 py-1 border rounded-xl"
-          onClick={() => setPage((current) => Math.max(1, current - 1))}
-          disabled={page <= 1}
-        >
-          السابق
-        </button>
-        <span className="text-sm">صفحة {page}</span>
-        <button
-          className="px-3 py-1 border rounded-xl"
-          onClick={() => setPage((current) => current + 1)}
-          disabled={(data?.items.length ?? 0) < size}
-        >
-          التالي
-        </button>
-      </div>
+    <section className="space-y-4">
+      <header className="space-y-1">
+        <h1 className="text-2xl font-bold text-[rgb(var(--ao-fg))]">المستخدمون / Users</h1>
+        <p className="text-sm opacity-70">إدارة الحسابات، الأدوار، وحالة المستخدمين.</p>
+      </header>
+
+      <DataTableToolbar
+        onSearchAction={setSearch}
+        onCreateAction={() => setOpen(true)}
+        placeholder="ابحث بالبريد أو الاسم"
+      />
+
+      {isLoading ? (
+        <div className="rounded-2xl border border-dashed p-6 text-center text-sm opacity-70">
+          جارٍ تحميل المستخدمين…
+        </div>
+      ) : isError ? (
+        <div className="rounded-2xl border border-dashed border-red-400 bg-red-50 p-6 text-sm text-red-700">
+          تعذر تحميل البيانات.
+        </div>
+      ) : (
+        <DataTable<User> columns={columns} data={rows} pageSize={12} />
+      )}
+
+      <Modal
+        title="إضافة مستخدم جديد"
+        open={open}
+        onOpenChangeAction={(value) => {
+          if (!value) {
+            resetModal();
+          }
+          setOpen(value);
+        }}
+        footer={
+          <>
+            <Button variant="outline" type="button" onClick={() => setOpen(false)}>
+              إلغاء
+            </Button>
+            <Button type="button" onClick={handleCreate} disabled={createUser.isPending}>
+              {createUser.isPending ? "جاري الحفظ…" : "حفظ"}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-3">
+          <label htmlFor="user-email" className="text-sm">
+            البريد الإلكتروني
+          </label>
+          <Input
+            id="user-email"
+            placeholder="user@example.com"
+            type="email"
+            autoFocus
+            value={form.email}
+            onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
+          />
+
+          <label htmlFor="user-name" className="text-sm">
+            الاسم الكامل
+          </label>
+          <Input
+            id="user-name"
+            placeholder="اسم المستخدم"
+            value={form.name}
+            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+          />
+
+          <label htmlFor="user-password" className="text-sm">
+            كلمة المرور المؤقتة
+          </label>
+          <Input
+            id="user-password"
+            type="password"
+            placeholder="••••••••"
+            value={form.password}
+            onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))}
+          />
+        </div>
+      </Modal>
     </section>
   );
 }

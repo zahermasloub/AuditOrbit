@@ -1,10 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { ColumnDef } from "@tanstack/react-table";
 
-import DataTable from "../../components/table/DataTable";
-import { apiFetch } from "../../lib/apiFetch";
+import { DataTable, type DataTableColumn } from "@/app/components/table/DataTable";
+import { apiFetch } from "@/app/lib/apiFetch";
 
 type Role = { id: number; name: string };
 
@@ -14,9 +13,9 @@ export default function RolesPage() {
     queryFn: () => apiFetch<Role[]>("/roles"),
   });
 
-  const columns: ColumnDef<Role>[] = [
-    { header: "المعرّف / ID", accessorKey: "id" },
-    { header: "الدور / Role", accessorKey: "name" },
+  const columns: DataTableColumn<Role>[] = [
+    { header: "المعرّف", accessorKey: "id" },
+    { header: "الدور", accessorKey: "name" },
   ];
 
   if (isLoading) return <p>جارِ التحميل…</p>;
@@ -25,7 +24,7 @@ export default function RolesPage() {
   return (
     <section className="space-y-4">
       <h1 className="text-2xl font-bold">الأدوار / Roles</h1>
-      <DataTable data={data ?? []} columns={columns} />
+      <DataTable<Role> data={data ?? []} columns={columns} pageSize={12} />
     </section>
   );
 }

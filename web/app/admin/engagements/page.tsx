@@ -4,12 +4,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { ColumnDef } from "@tanstack/react-table";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 
-import DataTable from "../../components/table/DataTable";
-import { apiFetch } from "../../lib/apiFetch";
+import { DataTable, type DataTableColumn } from "@/app/components/table/DataTable";
+import { apiFetch } from "@/app/lib/apiFetch";
 
 type Engagement = {
   id: string;
@@ -54,20 +53,17 @@ export default function EngagementsPage() {
     placeholderData: (previous) => previous,
   });
 
-  const columns: ColumnDef<Engagement>[] = [
-    { header: "العنوان / Title", accessorKey: "title" },
-    { header: "الحالة / Status", accessorKey: "status" },
-    { header: "المخاطر / Risk", accessorKey: "risk_rating" },
+  const columns: DataTableColumn<Engagement>[] = [
+    { header: "العنوان", accessorKey: "title" },
+    { header: "الحالة", accessorKey: "status" },
+    { header: "المخاطر", accessorKey: "risk_rating" },
     {
-      header: "تاريخ الإنشاء / Created",
+      header: "تاريخ الإنشاء",
       accessorKey: "created_at",
-      cell: ({ getValue }) => {
-        const value = getValue<string | null>();
-        if (!value) return "—";
-        const parsed = new Date(value);
-        if (Number.isNaN(parsed.getTime())) {
-          return value;
-        }
+      cell: ({ row }: { row: Engagement }) => {
+        if (!row.created_at) return "—";
+        const parsed = new Date(row.created_at);
+        if (Number.isNaN(parsed.getTime())) return row.created_at;
         return format(parsed, "yyyy-MM-dd");
       },
     },
@@ -150,7 +146,7 @@ export default function EngagementsPage() {
         </form>
       </div>
 
-      <DataTable data={data?.items ?? []} columns={columns} />
+  <DataTable<Engagement> data={data?.items ?? []} columns={columns} pageSize={10} />
       <div className="flex items-center justify-end gap-2">
         <button
           className="rounded-xl border px-3 py-1"

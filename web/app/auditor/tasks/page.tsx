@@ -1,141 +1,134 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { Button } from "@/app/components/ui/Button";
+import { Card } from "@/app/components/ui/Card";
+import { StatusBadge } from "@/app/components/ui/StatusBadge";
 import { apiFetch } from "@/app/lib/apiFetch";
 
-interface Task {
+type Task = {
   id: string;
+  engagement_id: string;
   title: string;
-  start_date: string;
   status: string;
-  assigned_at: string;
+  assigned_at?: string | null;
+  due_date?: string | null;
+  start_date?: string | null;
+};
+
+type TasksResponse = {
+  items?: Task[];
+};
+
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
 }
 
-export default function AuditorTasks() {
+export default function AuditorTasksPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { data: tasks, isLoading } = useQuery({
-    queryKey: ["auditor-all-tasks"],
-    queryFn: () => apiFetch<{ items: Task[] }>("/auditor/tasks?archived=false"),
-  });
-
-  const acceptMutation = useMutation({
-    mutationFn: (taskId: string) =>
-      apiFetch(`/auditor/tasks/${taskId}/accept`, { method: "POST" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auditor-all-tasks"] });
+  const { data, isLoading, isError } = useQuery<Task[]>({
+    queryKey: ["auditor-tasks"],
+    queryFn: async () => {
+      const response = await apiFetch<TasksResponse>("/auditor/tasks?page=1&size=100");
+      return response.items ?? [];
     },
   });
 
-  const declineMutation = useMutation({
-    mutationFn: (taskId: string) =>
-      apiFetch(`/auditor/tasks/${taskId}/decline`, { method: "POST" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["auditor-all-tasks"] });
-    },
+  const tasks = data ?? [];
+
+  const acceptTask = useMutation({
+    mutationFn: (taskId: string) => apiFetch(`/auditor/tasks/${taskId}/accept`, { method: "POST" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auditor-tasks"] }),
   });
 
-  if (isLoading) {
-    return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="h-32 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
-  }
+  const declineTask = useMutation({
+    mutationFn: (taskId: string) => apiFetch(`/auditor/tasks/${taskId}/decline`, { method: "POST" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["auditor-tasks"] }),
+  });
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">جميع المهام</h1>
-          <div className="space-x-4 space-x-reverse">
-            <button
-              onClick={() => router.push("/auditor/archive")}
-              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium"
-            >
-              الأرشيف
-            </button>
-            <button
-              onClick={() => router.push("/auditor")}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
-            >
-              لوحة التحكم
-            </button>
-          </div>
+    <section className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-[rgb(var(--ao-fg))]">مهامي / My Tasks</h1>
+          <p className="text-sm opacity-70">اطّلع على المهام الحالية واتخذ إجراءً سريعًا.</p>
         </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" type="button" onClick={() => router.push("/auditor")}>لوحة التحكم</Button>
+          <Button variant="outline" type="button" onClick={() => router.push("/auditor/archive")}>الأرشيف</Button>
+        </div>
+      </header>
 
-        {!tasks?.items || tasks.items.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <p className="text-gray-500 text-lg">لا توجد مهام</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {tasks.items.map((task) => (
-              <div
-                key={task.id}
-                className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {task.title}
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
-                      <p>
-                        <span className="font-medium">تاريخ البدء:</span>{" "}
-                        {new Date(task.start_date).toLocaleDateString("ar-SA")}
-                      </p>
-                      <p>
-                        <span className="font-medium">الحالة:</span>{" "}
-                        <span
-                          className={`px-2 py-1 rounded ${
-                            task.status === "active"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          {task.status === "active" ? "نشط" : task.status}
-                        </span>
-                      </p>
-                      <p>
-                        <span className="font-medium">تم التعيين:</span>{" "}
-                        {new Date(task.assigned_at).toLocaleDateString("ar-SA")}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 mr-4">
-                    <button
-                      onClick={() => acceptMutation.mutate(task.id)}
-                      disabled={acceptMutation.isPending}
-                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
-                    >
-                      قبول
-                    </button>
-                    <button
-                      onClick={() => declineMutation.mutate(task.id)}
-                      disabled={declineMutation.isPending}
-                      className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
-                    >
-                      رفض
-                    </button>
-                    <button
-                      onClick={() => router.push(`/auditor/engagement/${task.id}`)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
-                    >
-                      عرض
-                    </button>
-                  </div>
+      {isLoading ? (
+        <div className="rounded-2xl border border-dashed p-6 text-center text-sm opacity-70">
+          جارٍ تحميل المهام…
+        </div>
+      ) : isError ? (
+        <div className="rounded-2xl border border-dashed border-red-400 bg-red-50 p-6 text-sm text-red-700">
+          تعذر تحميل البيانات.
+        </div>
+      ) : tasks.length === 0 ? (
+        <div className="rounded-2xl border border-dashed p-10 text-center text-sm opacity-70">
+          لا توجد مهام حالية.
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {tasks.map((task) => (
+            <Card key={task.id} className="space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold text-[rgb(var(--ao-fg))]">{task.title}</h3>
+                  <div className="text-xs opacity-70">معرف المهمة: {task.engagement_id.slice(0, 8)}…</div>
                 </div>
+                <StatusBadge value={task.status} />
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+              <dl className="grid gap-2 text-xs opacity-70">
+                <div className="flex items-center justify-between">
+                  <dt>بدء</dt>
+                  <dd>{formatDate(task.start_date)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt>تعيين</dt>
+                  <dd>{formatDate(task.assigned_at)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt>استحقاق</dt>
+                  <dd>{formatDate(task.due_date)}</dd>
+                </div>
+              </dl>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="success"
+                  type="button"
+                  disabled={acceptTask.isPending}
+                  onClick={() => acceptTask.mutate(task.id)}
+                >
+                  {acceptTask.isPending ? "..." : "قبول"}
+                </Button>
+                <Button
+                  variant="danger"
+                  type="button"
+                  disabled={declineTask.isPending}
+                  onClick={() => declineTask.mutate(task.id)}
+                >
+                  {declineTask.isPending ? "..." : "رفض"}
+                </Button>
+                <Button variant="outline" type="button" asChild>
+                  <Link href={`/auditor/engagement/${task.engagement_id}`}>التفاصيل</Link>
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

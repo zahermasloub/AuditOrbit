@@ -1,202 +1,101 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
-import { apiFetch } from "../../lib/apiFetch";
+import { FilterBar } from "@/app/components/manager/FilterBar";
+import { DataTable, type DataTableColumn } from "@/app/components/table/DataTable";
+import { DataTableToolbar } from "@/app/components/table/DataTableToolbar";
+import { StatusBadge } from "@/app/components/ui/StatusBadge";
+import { apiFetch } from "@/app/lib/apiFetch";
 
-type Engagement = {
+type EngagementRow = {
   id: string;
   title: string;
+  department?: string | null;
+  status: string;
   start_date?: string | null;
-  end_date?: string | null;
-  status?: string | null;
+  due_date?: string | null;
 };
 
-type User = {
-  id: string;
-  email: string;
-  name: string;
+type EngagementResponse = {
+  items?: EngagementRow[];
 };
 
-type Page<T> = {
-  items: T[];
-  page: number;
-  size: number;
-  total: number;
-};
-
-type AssignmentResponse = {
-  ok: boolean;
-  engagement_id: string;
-  auditor_id: string;
-  created?: boolean;
-  removed?: boolean;
-};
-
-type AssignInput = {
-  engagementId: string;
-  auditorId: string;
-};
+function formatPeriod(value?: string | null) {
+  if (!value) return "—";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("ar-SA", { month: "short", day: "numeric" });
+}
 
 export default function ManagerEngagementsPage() {
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [selectedEngagement, setSelectedEngagement] = useState<string>("");
-  const [auditorId, setAuditorId] = useState<string>("");
-  const [message, setMessage] = useState<string>("");
+  const [range, setRange] = useState(30);
 
-  const { data: engagements, isLoading, error } = useQuery<Page<Engagement>>({
-    queryKey: ["mgr-engagements"],
-    queryFn: () => apiFetch<Page<Engagement>>("/engagements?page=1&size=20"),
-  });
-
-  const { data: users } = useQuery<Page<User>, Error, User[]>({
-    queryKey: ["mgr-users"],
-    queryFn: () => apiFetch<Page<User>>("/users?page=1&size=200"),
-    select: (page) => page.items,
+  const { data, isLoading, isError } = useQuery<EngagementRow[]>({
+    queryKey: ["mgr-engagements", search, range],
+    queryFn: async () => {
+      const response = await apiFetch<EngagementResponse>(
+        `/engagements?page=1&size=200&search=${encodeURIComponent(search)}&range=${range}`,
+      );
+      return response.items ?? [];
+    },
     staleTime: 60_000,
   });
 
-  const filtered = useMemo(() => {
-    const items = engagements?.items ?? [];
-    const term = search.trim().toLowerCase();
-    if (!term) return items;
-    return items.filter((item) => item.title.toLowerCase().includes(term));
-  }, [engagements, search]);
+  const rows = data ?? [];
 
-  const assignMutation = useMutation<AssignmentResponse, Error, AssignInput>({
-    mutationFn: ({ engagementId, auditorId }) => {
-      const qs = new URLSearchParams({ auditor_id: auditorId });
-      return apiFetch<AssignmentResponse>(`/manager/engagements/${engagementId}/assign?${qs.toString()}`, {
-        method: "POST",
-      });
-    },
-    onSuccess: (response) => {
-      setMessage(response.created ? "تم تعيين المدقق بنجاح." : "المدقق معين مسبقًا.");
-      queryClient.invalidateQueries({ queryKey: ["mgr-engagements"] });
-    },
-    onError: () => setMessage("تعذر تعيين المدقق."),
-  });
-
-  const unassignMutation = useMutation<AssignmentResponse, Error, AssignInput>({
-    mutationFn: ({ engagementId, auditorId }) => {
-      const qs = new URLSearchParams({ auditor_id: auditorId });
-      return apiFetch<AssignmentResponse>(`/manager/engagements/${engagementId}/assign?${qs.toString()}`, {
-        method: "DELETE",
-      });
-    },
-    onSuccess: (response) => {
-      setMessage(response.removed ? "تم إلغاء التعيين." : "لم يتم العثور على تعيين لحذفه.");
-      queryClient.invalidateQueries({ queryKey: ["mgr-engagements"] });
-    },
-    onError: () => setMessage("تعذر إلغاء التعيين."),
-  });
-
-  const onAssign = () => {
-    if (!selectedEngagement || !auditorId) return;
-    assignMutation.mutate({ engagementId: selectedEngagement, auditorId });
-  };
-
-  const onUnassign = () => {
-    if (!selectedEngagement || !auditorId) return;
-    unassignMutation.mutate({ engagementId: selectedEngagement, auditorId });
-  };
-
-  if (isLoading) return <p>جارِ التحميل…</p>;
-  if (error) return <p className="text-red-600">تعذر جلب المهام.</p>;
+  const columns = useMemo<DataTableColumn<EngagementRow>[]>(
+    () => [
+      { header: "العنوان", accessorKey: "title" },
+      { header: "الإدارة", accessorKey: "department" },
+      {
+        header: "الحالة",
+        accessorKey: "status",
+        cell: ({ row }: { row: EngagementRow }) => <StatusBadge value={row.status} />,
+      },
+      {
+        header: "بداية",
+        accessorKey: "start_date",
+        cell: ({ row }: { row: EngagementRow }) => formatPeriod(row.start_date),
+      },
+      {
+        header: "استحقاق",
+        accessorKey: "due_date",
+        cell: ({ row }: { row: EngagementRow }) => formatPeriod(row.due_date),
+      },
+    ],
+    [],
+  );
 
   return (
-    <section className="space-y-5">
-      <header className="space-y-2">
-        <h1 className="text-xl font-bold">إدارة المهام والتعيينات</h1>
-        <p className="text-sm opacity-70">اختر مهمة ثم قم بتعيين أو إلغاء تعيين المدقق المناسب.</p>
-        <input
-          className="border rounded-xl p-2 w-full sm:max-w-md"
-          placeholder="بحث بالعنوان"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
+    <section className="space-y-4">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-[rgb(var(--ao-fg))]">المهام / Engagements</h1>
+          <p className="text-sm opacity-70">عرض حالة المهام مع الفلاتر الزمنية والبحث.</p>
+        </div>
+        <FilterBar onChangeAction={({ range: value }) => setRange(value)} />
       </header>
 
-      <div className="overflow-x-auto rounded-2xl border bg-white dark:bg-neutral-900">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr>
-              <th className="px-3 py-2 text-left">العنوان</th>
-              <th className="px-3 py-2">الفترة</th>
-              <th className="px-3 py-2">الحالة</th>
-              <th className="px-3 py-2">اختيار</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((engagement) => (
-              <tr key={engagement.id} className="border-t">
-                <td className="px-3 py-2">{engagement.title}</td>
-                <td className="px-3 py-2">
-                  {(engagement.start_date ?? "—") + " → " + (engagement.end_date ?? "—")}
-                </td>
-                <td className="px-3 py-2">{engagement.status ?? "—"}</td>
-                <td className="px-3 py-2 text-center">
-                  <input
-                    type="radio"
-                    name="selected-engagement"
-                    onChange={() => {
-                      setSelectedEngagement(engagement.id);
-                      setMessage("");
-                    }}
-                    checked={selectedEngagement === engagement.id}
-                    aria-label={`Select ${engagement.title}`}
-                  />
-                </td>
-              </tr>
-            ))}
-            {!filtered.length && (
-              <tr>
-                <td className="px-3 py-6 text-center opacity-60" colSpan={4}>
-                  لا يوجد مهام مطابقة.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTableToolbar
+        onSearchAction={setSearch}
+        placeholder="ابحث بعنوان المهمة أو الإدارة"
+        right={<span className="text-xs opacity-60">النطاق: آخر {range} يومًا</span>}
+      />
 
-      <div className="border rounded-2xl p-4 space-y-3 bg-white dark:bg-neutral-900">
-        <h2 className="font-semibold">التعيين / Assignment</h2>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <select
-            className="border rounded-xl p-2 min-w-[240px]"
-            value={auditorId}
-            onChange={(event) => setAuditorId(event.target.value)}
-          >
-            <option value="">اختر مدقق</option>
-            {(users ?? []).map((user) => (
-              <option key={user.id} value={user.id}>
-                {user.name} — {user.email}
-              </option>
-            ))}
-          </select>
-          <div className="flex gap-2">
-            <button
-              className="px-3 py-2 rounded-xl border"
-              onClick={onAssign}
-              disabled={!selectedEngagement || !auditorId || assignMutation.isPending}
-            >
-              تعيين
-            </button>
-            <button
-              className="px-3 py-2 rounded-xl border"
-              onClick={onUnassign}
-              disabled={!selectedEngagement || !auditorId || unassignMutation.isPending}
-            >
-              إلغاء التعيين
-            </button>
-          </div>
+      {isLoading ? (
+        <div className="rounded-2xl border border-dashed p-6 text-center text-sm opacity-70">
+          جارٍ تحميل المهام…
         </div>
-        {!selectedEngagement && <p className="text-xs opacity-60">اختر مهمة من الجدول أولاً.</p>}
-        {message && <p className="text-sm text-brand">{message}</p>}
-      </div>
+      ) : isError ? (
+        <div className="rounded-2xl border border-dashed border-red-400 bg-red-50 p-6 text-sm text-red-700">
+          تعذر تحميل البيانات.
+        </div>
+      ) : (
+        <DataTable<EngagementRow> columns={columns} data={rows} pageSize={12} />
+      )}
     </section>
   );
 }
