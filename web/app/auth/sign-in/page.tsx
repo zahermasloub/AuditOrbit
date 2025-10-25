@@ -23,6 +23,7 @@ export default function SignInPage() {
   } = useForm<FormData>({ resolver: zodResolver(Schema) });
   const [err, setErr] = useState<string | undefined>();
   const router = useRouter();
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
 
   const onSubmit = async (data: FormData) => {
     setErr(undefined);
@@ -38,7 +39,13 @@ export default function SignInPage() {
     const tokens = await response.json();
     localStorage.setItem("token", tokens.access_token);
     localStorage.setItem("refresh", tokens.refresh_token);
-    router.push("/admin");
+    
+    // Set cookie for middleware
+    document.cookie = `token=${tokens.access_token}; path=/; max-age=86400; SameSite=Lax`;
+    
+    // Redirect to original page or admin
+    const redirect = searchParams?.get("redirect") || "/admin";
+    router.push(redirect);
   };
 
   return (
