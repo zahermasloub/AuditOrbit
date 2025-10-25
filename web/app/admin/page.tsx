@@ -46,6 +46,9 @@ export default function AdminHome() {
         <Link className="px-4 py-2 rounded-xl border" href="/manager">
           مساحة المدير / IA Manager
         </Link>
+        <Link className="px-4 py-2 rounded-xl border bg-blue-50 border-blue-300" href="/auditor">
+          مساحة المراجع / Auditor Workspace
+        </Link>
       </nav>
     </div>
   );
