@@ -22,6 +22,8 @@ from .reports import (
 	ReportUpdateIn,
 	ReportsPage,
 )
+from .wp import WorkingPaperCreate, WorkingPaperOut
+from .samples import SampleCreate, SampleOut
 
 __all__ = [
 	"LoginIn",
@@ -48,4 +50,8 @@ __all__ = [
 	"ReportOut",
 	"ReportActionOut",
 	"ReportsPage",
+	"WorkingPaperCreate",
+	"WorkingPaperOut",
+	"SampleCreate",
+	"SampleOut",
 ]

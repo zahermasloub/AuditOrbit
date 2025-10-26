@@ -11,8 +11,10 @@ from . import (
   manager,
   notifications,
   reports,
+	samples,
   roles,
   users,
+	wp,
 )
 
 __all__ = [
@@ -28,6 +30,8 @@ __all__ = [
 	"manager",
 	"notifications",
 	"reports",
+	"samples",
 	"roles",
 	"users",
+	"wp",
 ]
