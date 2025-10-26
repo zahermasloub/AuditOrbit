@@ -50,5 +50,26 @@ annual_plan_item_id UUID REFERENCES annual_plan_items(id) ON DELETE CASCADE,
 user_id UUID REFERENCES users(id),
 role TEXT,
 assigned_hours INT CHECK (assigned_hours>=0) DEFAULT 0,
-notes TEXT
+month SMALLINT CHECK (month BETWEEN 1 AND 12)
 );
+CREATE INDEX IF NOT EXISTS idx_risk_universe_score ON risk_universe ((
+  (inherent_impact*1.0) + (inherent_likelihood*1.0) + (velocity*0.8) + (sensitivity*0.8)
+) DESC);
+
+-- Ensure annual_plans table exists with all required statuses
+CREATE TABLE IF NOT EXISTS annual_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  year INT NOT NULL,
+  status TEXT CHECK (status IN ('draft','submitted','committee_approved','rejected','published')) DEFAULT 'draft',
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Add published status if table already exists
+ALTER TABLE annual_plans
+  DROP CONSTRAINT IF EXISTS annual_plans_status_check;
+
+ALTER TABLE annual_plans
+  ADD CONSTRAINT annual_plans_status_check
+    CHECK (status IN ('draft','submitted','committee_approved','rejected','published'));
