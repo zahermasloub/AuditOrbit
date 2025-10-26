@@ -1,12 +1,32 @@
-from . import ai, auth, checklists, compare, engagements, evidence, reports, roles, users
+from . import (
+  ai,
+  audit,
+  auditor,
+  auth,
+  checklists,
+  compare,
+  engagements,
+  evidence,
+  followups,
+  manager,
+  notifications,
+  reports,
+  roles,
+  users,
+)
 
 __all__ = [
 	"ai",
+	"audit",
+	"auditor",
 	"auth",
 	"checklists",
 	"compare",
 	"engagements",
 	"evidence",
+	"followups",
+	"manager",
+	"notifications",
 	"reports",
 	"roles",
 	"users",

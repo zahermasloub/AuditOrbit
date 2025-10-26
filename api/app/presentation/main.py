@@ -13,6 +13,7 @@ from .routers import (
   compare,
   engagements,
   evidence,
+  followups,
   manager,
   notifications,
   reports,
@@ -45,6 +46,7 @@ app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(manager.router, prefix="/manager", tags=["manager"])
 app.include_router(auditor.router, prefix="/auditor", tags=["auditor"])
 app.include_router(notifications.router, tags=["notifications"])
+app.include_router(followups.router)
 app.include_router(audit.router, tags=["audit"])
 
 
