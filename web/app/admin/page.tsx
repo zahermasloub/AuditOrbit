@@ -1,61 +1,24 @@
 "use client";
+import Container from "../components/layout/Container";
+import SectionTitle from "../components/layout/SectionTitle";
+import CardGrid, { CardItem } from "../components/ui/CardGrid";
 
-import Link from "next/link";
-
-export default function AdminHome() {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-  if (!token) {
-    return (
-      <div className="p-6">
-        <p>
-          يجب تسجيل الدخول. {" "}
-          <Link href="/auth/sign-in" className="text-brand underline">
-            الانتقال لصفحة الدخول
-          </Link>
-        </p>
-      </div>
-    );
-  }
-
+export default function Page(){
+  const items: CardItem[] = [
+    { href:"/admin/users",        title:"المستخدمون / Users",         sub:"إدارة الحسابات والصلاحيات.", icon:"users",  tone:"primary" },
+    { href:"/admin/roles",        title:"الأدوار / Roles",            sub:"RBAC: أدوار وصلاحيات دقيقة.", icon:"key" },
+    { href:"/admin/engagements",  title:"المهام / Engagements",       sub:"إنشاء المهام وتخصيص الموارد.", icon:"kanban" },
+    { href:"/admin/checklists",   title:"القوائم / Checklists",       sub:"قوالب وبنود قابلة لإعادة الاستخدام.", icon:"list" },
+    { href:"/admin/evidence",     title:"الأدلة / Evidence",          sub:"رفع ملفات، إدارة MinIO، تتبّع الحالة.", icon:"upload" },
+    { href:"/admin/reports",      title:"التقارير / Reports",         sub:"الإصدارات والموافقات والنشر.", icon:"report", tone:"success" },
+    { href:"/admin/notifications",title:"الإشعارات / Notifications",  sub:"قنوات التبليغ وتتبع الحالة.", icon:"bell" },
+    { href:"/admin/audit-log",    title:"سجل التدقيق / Audit Log",    sub:"شفافية كاملة لكل الإجراءات.", icon:"shield" },
+    { href:"/admin/ai-lab",       title:"AI Lab",                      sub:"OCR, Parsing, Extraction, Comparison.", icon:"lab", tone:"warning" },
+  ];
   return (
-    <div className="p-6 space-y-4">
-      <h1 className="text-2xl font-bold">لوحة الإدارة / Admin</h1>
-      <nav className="flex gap-3 flex-wrap">
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/users">
-          المستخدمون / Users
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/roles">
-          الأدوار / Roles
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/engagements">
-          المهام / Engagements
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/checklists">
-          القوائم / Checklists
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/evidence">
-          الأدلة / Evidence
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/ai-lab">
-          AI Lab
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/reports">
-          التقارير / Reports
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/manager">
-          مساحة المدير / IA Manager
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border bg-blue-50 border-blue-300" href="/auditor">
-          مساحة المراجع / Auditor Workspace
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/notifications">
-          الإشعارات / Notifications
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/admin/audit-log">
-          سجل التدقيق / Audit Log
-        </Link>
-      </nav>
-    </div>
+    <Container className="py-8 sm:py-10 space-y-4">
+      <SectionTitle title="Admin / لوحة الإدارة" sub="وحدات الإدارة والتجهيز." />
+      <CardGrid items={items}/>
+    </Container>
   );
 }

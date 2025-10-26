@@ -28,3 +28,6 @@ body {
   color: var(--ao-fg);
 }
 * { outline-color: var(--ao-primary); }
+
+.pill{ @apply inline-flex items-center rounded-full border px-3 py-1 text-sm transition; }
+.pill-active{ @apply bg-[color:var(--ao-primary)]/10 border-[color:var(--ao-primary)] text-[color:var(--ao-primary)]; }

@@ -1,23 +1,18 @@
 "use client";
+import Container from "../components/layout/Container";
+import SectionTitle from "../components/layout/SectionTitle";
+import CardGrid, { CardItem } from "../components/ui/CardGrid";
 
-import Link from "next/link";
-
-export default function ManagerHome() {
+export default function Page(){
+  const items: CardItem[] = [
+    { href:"/manager/engagements", title:"المهام والتعيينات / Engagements", sub:"إدارة الخطة السنوية والموارد.", icon:"kanban", tone:"primary" },
+    { href:"/manager/findings",    title:"نتائج المراجعة / Findings",       sub:"تحليل النتائج وتتبع الإقفال.", icon:"search" },
+    { href:"/manager/reports",     title:"التقارير / Reports",              sub:"مراجعة وإقرار ونشر.", icon:"report", tone:"success" },
+  ];
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-bold">مساحة المدير / IA Manager</h1>
-      <nav className="flex gap-3 flex-wrap">
-        <Link className="px-4 py-2 rounded-xl border" href="/manager/engagements">
-          Engagements &amp; Assignments
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/manager/findings">
-          Findings Overview
-        </Link>
-        <Link className="px-4 py-2 rounded-xl border" href="/manager/reports">
-          Report Approvals
-        </Link>
-      </nav>
-      <p className="opacity-70 text-sm">اختر صفحة لإدارة المهام، التعيينات، النتائج، وموافقات التقارير.</p>
-    </section>
+    <Container className="py-8 sm:py-10 space-y-4">
+      <SectionTitle title="IA Manager / مساحة المدير" sub="إدارة الخطط والمهام والنتائج والتقارير." />
+      <CardGrid items={items}/>
+    </Container>
   );
 }
