@@ -25,6 +25,15 @@ function resolveTone(value: string | null | undefined): Tone {
   if (normalized.includes("closed")) {
     return "muted";
   }
+  if (normalized.includes("systematic")) {
+    return "warning";
+  }
+  if (normalized.includes("high_value") || normalized.includes("high value")) {
+    return "success";
+  }
+  if (normalized.includes("random")) {
+    return "primary";
+  }
   if (normalized.includes("rejected") || normalized.includes("blocked") || normalized.includes("error")) {
     return "danger";
   }

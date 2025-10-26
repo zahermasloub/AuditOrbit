@@ -9,6 +9,14 @@
   --ao-card-fg: 17 24 39;
 }
 
+:root {
+  --ao-badge-muted: 148 163 184;
+  --ao-badge-primary: var(--ao-primary);
+  --ao-badge-success: var(--ao-success);
+  --ao-badge-warning: var(--ao-warning);
+  --ao-badge-danger: var(--ao-danger);
+}
+
 .dark:root {
   --ao-primary-fg: 0 0 0;
   --ao-card-fg: 229 231 235;
