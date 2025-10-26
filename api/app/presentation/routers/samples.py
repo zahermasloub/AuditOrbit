@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from pydantic import BaseModel, Field
+from uuid import UUID
 from ...application.dtos import SampleCreate, SampleOut
 from ...infrastructure.db.session import SessionLocal
 from ...infrastructure.security.jwt import try_get_user_id
@@ -105,3 +107,64 @@ def create_sample(
     ).mappings().one()
     db.commit()
     return SampleOut(**dict(row))
+
+
+class SampleUpdate(BaseModel):
+    method: Optional[str] = Field(default=None, pattern=r"^(random|systematic|high_value)$")
+    size: Optional[int] = Field(default=None, gt=0, le=100000)
+
+
+@router.patch("/{sample_id}", response_model=SampleOut)
+def update_sample(
+    sample_id: UUID,
+    payload: SampleUpdate,
+    db: Session = Depends(get_db),
+    uid: str = Depends(current_user_id),
+) -> SampleOut:
+    enforce(db, uid, "samples", "update")
+
+    row = db.execute(text("select engagement_id from samples where id=:id"), {"id": str(sample_id)}).mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="sample_not_found")
+
+    engagement_id = str(row["engagement_id"])
+    _assert_can_access_engagement(db, uid, engagement_id)
+
+    update_result = db.execute(
+        text(
+            """
+                update samples
+                set method = coalesce(:method, method),
+                    size = coalesce(:size, size)
+                where id=:id
+                returning id, engagement_id, method, size, created_at
+            """
+        ),
+        {"id": str(sample_id), "method": payload.method, "size": payload.size},
+    ).mappings().first()
+
+    if not update_result:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="sample_not_found")
+
+    db.commit()
+    return SampleOut(**dict(update_result))
+
+
+@router.delete("/{sample_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_sample(
+    sample_id: UUID,
+    db: Session = Depends(get_db),
+    uid: str = Depends(current_user_id),
+) -> Response:
+    enforce(db, uid, "samples", "delete")
+
+    row = db.execute(text("select engagement_id from samples where id=:id"), {"id": str(sample_id)}).mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="sample_not_found")
+
+    engagement_id = str(row["engagement_id"])
+    _assert_can_access_engagement(db, uid, engagement_id)
+
+    db.execute(text("delete from samples where id=:id"), {"id": str(sample_id)})
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -56,3 +56,52 @@ def test_samples_create_and_list(auth: dict[str, str]) -> None:
     list_response.raise_for_status()
     data = list_response.json()
     assert any(item.get("method") == "systematic" for item in data.get("items", []))
+
+
+def test_wp_update_and_delete(auth: dict[str, str]) -> None:
+    engagements = httpx.get(f"{API}/engagements?page=1&size=1", headers=auth, timeout=30.0)
+    engagements.raise_for_status()
+    engagement_id = engagements.json()["items"][0]["id"]
+
+    # Create working paper
+    wp_payload = {
+        "engagement_id": engagement_id,
+        "wp_ref": "TEST-WP-01",
+        "objective": "Test update/delete",
+        "procedure": "Initial procedure",
+    }
+    create_resp = httpx.post(f"{API}/wp", headers=auth, json=wp_payload, timeout=30.0)
+    assert create_resp.status_code == 201
+    wp_id = create_resp.json()["id"]
+
+    # Update working paper
+    update_payload = {"objective": "Updated objective"}
+    update_resp = httpx.patch(f"{API}/wp/{wp_id}", headers=auth, json=update_payload, timeout=30.0)
+    assert update_resp.status_code == 200
+    assert update_resp.json()["objective"] == "Updated objective"
+
+    # Delete working paper
+    delete_resp = httpx.delete(f"{API}/wp/{wp_id}", headers=auth, timeout=30.0)
+    assert delete_resp.status_code == 204
+
+
+def test_samples_update_and_delete(auth: dict[str, str]) -> None:
+    engagements = httpx.get(f"{API}/engagements?page=1&size=1", headers=auth, timeout=30.0)
+    engagements.raise_for_status()
+    engagement_id = engagements.json()["items"][0]["id"]
+
+    # Create sample
+    sample_payload = {"engagement_id": engagement_id, "method": "random", "size": 10}
+    create_resp = httpx.post(f"{API}/samples", headers=auth, json=sample_payload, timeout=30.0)
+    assert create_resp.status_code == 201
+    sample_id = create_resp.json()["id"]
+
+    # Update sample
+    update_payload = {"size": 20}
+    update_resp = httpx.patch(f"{API}/samples/{sample_id}", headers=auth, json=update_payload, timeout=30.0)
+    assert update_resp.status_code == 200
+    assert update_resp.json()["size"] == 20
+
+    # Delete sample
+    delete_resp = httpx.delete(f"{API}/samples/{sample_id}", headers=auth, timeout=30.0)
+    assert delete_resp.status_code == 204

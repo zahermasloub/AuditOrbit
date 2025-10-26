@@ -112,6 +112,20 @@ export default function ManagerWorkingPapersPage({ params }: { params: { id: str
         header: "مراجعة / Reviewed",
         cell: ({ row }) => formatDateTime(row.reviewed_at),
       },
+      {
+        accessorKey: "actions",
+        header: "إجراءات",
+        cell: ({ row }) => (
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => console.log("Edit WP:", row.id)}>
+              تعديل
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => console.log("Delete WP:", row.id)}>
+              حذف
+            </Button>
+          </div>
+        ),
+      },
     ],
     [],
   );

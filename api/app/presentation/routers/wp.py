@@ -1,11 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Generator
+from typing import Any, Dict, Generator, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from datetime import datetime
+from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query, Response, status
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
+from pydantic import BaseModel, Field, constr
+from uuid import UUID
 
 from ...application.dtos import WorkingPaperCreate, WorkingPaperOut
 from ...infrastructure.db.session import SessionLocal
@@ -116,3 +120,74 @@ def create_wp(
     except IntegrityError as ex:  # pragma: no cover - fast path
         db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate wp_ref for this engagement") from ex
+
+
+class WorkingPaperUpdate(BaseModel):
+    objective: Optional[constr(strip_whitespace=True, min_length=1, max_length=500)] = None
+    procedure: Optional[constr(strip_whitespace=True, min_length=1, max_length=2000)] = None
+    prepared_at: Optional[datetime] = None
+    reviewed_at: Optional[datetime] = None
+
+
+@router.patch("/{wp_id}", response_model=WorkingPaperOut)
+def update_wp(
+    wp_id: UUID,
+    payload: WorkingPaperUpdate,
+    db: Session = Depends(get_db),
+    uid: str = Depends(current_user_id),
+) -> WorkingPaperOut:
+    enforce(db, uid, "working_papers", "update")
+
+    row = db.execute(text("select engagement_id from working_papers where id=:id"), {"id": str(wp_id)}).mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="working_paper_not_found")
+
+    engagement_id = str(row["engagement_id"])
+    _assert_can_access_engagement(db, uid, engagement_id)
+
+    update_result = db.execute(
+        text(
+            """
+                update working_papers
+                set objective = coalesce(:obj, objective),
+                    procedure = coalesce(:proc, procedure),
+                    prepared_at = coalesce(:prep, prepared_at),
+                    reviewed_at = coalesce(:rev, reviewed_at)
+                where id=:id
+                returning id, engagement_id, wp_ref, objective, procedure, prepared_at, reviewed_at, created_at
+            """
+        ),
+        {
+            "id": str(wp_id),
+            "obj": payload.objective,
+            "proc": payload.procedure,
+            "prep": payload.prepared_at,
+            "rev": payload.reviewed_at,
+        },
+    ).mappings().first()
+
+    if not update_result:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="working_paper_not_found")
+
+    db.commit()
+    return WorkingPaperOut(**dict(update_result))
+
+
+@router.delete("/{wp_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_wp(
+    wp_id: UUID,
+    db: Session = Depends(get_db),
+    uid: str = Depends(current_user_id),
+) -> Response:
+    enforce(db, uid, "working_papers", "delete")
+
+    row = db.execute(text("select engagement_id from working_papers where id=:id"), {"id": str(wp_id)}).mappings().first()
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="working_paper_not_found")
+
+    engagement_id = str(row["engagement_id"])
+    _assert_can_access_engagement(db, uid, engagement_id)
+
+    db.execute(text("delete from working_papers where id=:id"), {"id": str(wp_id)})
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -102,6 +102,20 @@ export default function ManagerSamplingPage({ params }: { params: { id: string }
         header: "تاريخ الإنشاء",
         cell: ({ row }) => formatDateTime(row.created_at),
       },
+      {
+        accessorKey: "actions",
+        header: "إجراءات",
+        cell: ({ row }) => (
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => console.log("Edit Sample:", row.id)}>
+              تعديل
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => console.log("Delete Sample:", row.id)}>
+              حذف
+            </Button>
+          </div>
+        ),
+      },
     ],
     [],
   );
