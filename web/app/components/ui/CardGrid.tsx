@@ -9,6 +9,7 @@ export type CardItem = {
   sub?: string;
   icon: AOIconKey;
   tone?: "primary" | "success" | "warning" | "danger" | "muted";
+  kicker?: string; // شارة صغيرة أعلى العنوان
   disabled?: boolean;
 };
 
@@ -26,6 +27,7 @@ export default function CardGrid({items}:{items: CardItem[]}) {
                 <Icon name={it.icon} className="w-5 h-5" />
               </span>
               <div className="min-w-0">
+                {it.kicker && <div className="text-[10px] uppercase opacity-60">{it.kicker}</div>}
                 <div className="font-semibold leading-6 truncate">{it.title}</div>
                 {it.sub && <div className="text-xs opacity-70 mt-1 line-clamp-2">{it.sub}</div>}
               </div>
@@ -42,7 +44,7 @@ function toneBg(t?: CardItem["tone"]) {
   if (t==="success") return "bg-[color:var(--ao-success)]/5";
   if (t==="warning") return "bg-[color:var(--ao-warning)]/5";
   if (t==="danger")  return "bg-[color:var(--ao-danger)]/5";
-  return "bg-[color:var(--ao-muted)]/5";
+  return "bg-black/5 dark:bg-white/5";
 }
 function toneBorder(t?: CardItem["tone"]) {
   if (t==="primary") return "border-[color:var(--ao-primary)]/30";

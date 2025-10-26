@@ -2,7 +2,8 @@
 import {
   ShieldCheck, Users, KeyRound, ClipboardList, ListChecks, FileText,
   FolderKanban, FlaskConical, Bell, FileChartColumn, Database, Cpu, Cog,
-  Library, Search, Upload, Bug, CheckCircle2
+  Library, Search, Upload, Bug, CheckCircle2, FilePlus2, FileCheck2,
+  FileClock, FileArchive, Send, Stamp
 } from "lucide-react";
 
 export const AOIcons = {
@@ -24,6 +25,12 @@ export const AOIcons = {
   upload: Upload,
   bug: Bug,
   ok: CheckCircle2,
+  fileAdd: FilePlus2,
+  fileApprove: FileCheck2,
+  filePending: FileClock,
+  fileArchive: FileArchive,
+  send: Send,
+  stamp: Stamp,
 } as const;
 
 export type AOIconKey = keyof typeof AOIcons;
