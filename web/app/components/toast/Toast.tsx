@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 type ToastMsg = { id: string; kind?: "success"|"error"|"info"; text: string };
@@ -8,6 +8,12 @@ const ToastCtx = createContext<{ push:(m:Omit<ToastMsg,"id">)=>void }>({ push: (
 
 export function ToastProvider({children}:{children:React.ReactNode}) {
   const [items,setItems] = useState<ToastMsg[]>([]);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const push = (m:Omit<ToastMsg,"id">) => {
     const id = crypto.randomUUID();
     setItems(v => [...v, {id, ...m}]);
@@ -17,7 +23,7 @@ export function ToastProvider({children}:{children:React.ReactNode}) {
   return (
     <ToastCtx.Provider value={ctx}>
       {children}
-      {createPortal(
+      {mounted && typeof window !== 'undefined' && createPortal(
         <div aria-live="polite" className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 rtl:left-4 rtl:right-auto">
           {items.map(i=>(
             <div key={i.id}
