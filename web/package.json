@@ -11,7 +11,9 @@
     "postinstall": "tailwindcss -i ./app/globals.css -o ./public/.dev.css || true",
     "test:e2e": "playwright test tests/e2e --reporter=list",
     "test:a11y": "playwright test tests/a11y --reporter=list",
-    "test:ui": "pnpm test:e2e && pnpm test:a11y"
+    "test:visual": "playwright test tests/visual --reporter=list",
+    "test:ui": "pnpm test:e2e && pnpm test:a11y && pnpm test:visual",
+    "perf:lhci": "pnpm build && pnpm dlx lhci autorun --config=lhci/lighthouserc.json --budgets-path=lhci/budgets.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -35,11 +37,12 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.10.2",
+    "@lhci/cli": "^0.15.1",
+    "@playwright/test": "^1.49.1",
     "@types/node": "20.12.8",
     "@types/react": "18.2.66",
     "@types/react-dom": "18.2.21",
-    "@axe-core/playwright": "^4.10.2",
-    "@playwright/test": "^1.49.1",
     "eslint": "8.57.1",
     "eslint-config-next": "14.2.11",
     "typescript": "5.6.3"
