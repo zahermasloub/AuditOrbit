@@ -13,6 +13,18 @@ function resolveTone(value: string | null | undefined): Tone {
   if (normalized.includes("in_review") || normalized.includes("review") || normalized.includes("pending")) {
     return "warning";
   }
+  if (normalized.includes("implemented")) {
+    return "success";
+  }
+  if (normalized.includes("in_progress") || normalized.includes("progress")) {
+    return "primary";
+  }
+  if (normalized.includes("open")) {
+    return "warning";
+  }
+  if (normalized.includes("closed")) {
+    return "muted";
+  }
   if (normalized.includes("rejected") || normalized.includes("blocked") || normalized.includes("error")) {
     return "danger";
   }
