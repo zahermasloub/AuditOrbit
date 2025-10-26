@@ -2,8 +2,13 @@ import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from ..middlewares.audit import audit_log_middleware
+from .middlewares.rate_limit import limiter
+from .middlewares.security import SecurityHeadersMiddleware
 from .routers import (
   ai,
   audit,
@@ -24,9 +29,17 @@ from .routers import (
 )
 
 app = FastAPI(title="AuditOrbit API", version="0.2.0", docs_url="/docs", redoc_url="/redoc")
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SecurityHeadersMiddleware)
 app.middleware("http")(audit_log_middleware)
 
-origins = [os.getenv("WEB_ORIGIN", "http://localhost:3000")]
+raw_origins = os.getenv("WEB_ORIGINS")
+if raw_origins:
+  origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+else:
+  origins = [os.getenv("WEB_ORIGIN", "http://localhost:3000")]
 
 app.add_middleware(
   CORSMiddleware,

@@ -8,7 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "tailwindcss -i ./app/globals.css -o ./public/.dev.css || true"
+    "postinstall": "tailwindcss -i ./app/globals.css -o ./public/.dev.css || true",
+    "test:e2e": "playwright test tests/e2e --reporter=list",
+    "test:a11y": "playwright test tests/a11y --reporter=list",
+    "test:ui": "pnpm test:e2e && pnpm test:a11y"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -32,6 +35,8 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@playwright/test": "^1.56.1",
     "@types/node": "20.12.8",
     "@types/react": "18.2.66",
     "@types/react-dom": "18.2.21",
