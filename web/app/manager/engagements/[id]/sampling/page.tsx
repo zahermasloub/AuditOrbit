@@ -8,15 +8,11 @@ import { Card } from "@/app/components/ui/Card";
 import { Button } from "@/app/components/ui/Button";
 import { Input } from "@/app/components/ui/Input";
 import { StatusBadge } from "@/app/components/ui/StatusBadge";
+import SamplingLegend from "@/app/components/legends/SamplingLegend";
+import { managerLinks } from "@/app/manager/_nav/links";
 import { DataTable, type DataTableColumn } from "@/app/components/table/DataTable";
 import { DataTableToolbar } from "@/app/components/table/DataTableToolbar";
 import { apiFetch } from "@/app/lib/apiFetch";
-
-const SIDEBAR_ITEMS = [
-  { href: "/manager/dashboard", label: "لوحة المدير" },
-  { href: "/manager/engagements", label: "المهام" },
-  { href: "/manager/reports", label: "التقارير" },
-];
 
 type Sample = {
   id: string;
@@ -51,6 +47,7 @@ function formatDateTime(value: string) {
 export default function ManagerSamplingPage({ params }: { params: { id: string } }) {
   const engagementId = params.id;
   const queryClient = useQueryClient();
+  const sidebarItems = managerLinks(engagementId);
 
   const [search, setSearch] = useState("");
   const [method, setMethod] = useState("random");
@@ -114,7 +111,7 @@ export default function ManagerSamplingPage({ params }: { params: { id: string }
 
   return (
     <AppShell
-      sidebarItems={SIDEBAR_ITEMS}
+      sidebarItems={sidebarItems}
       user={{ name: "Manager", role: "Manager" }}
       breadcrumbs={[
         { label: "المدير", href: "/manager/dashboard" },
@@ -141,6 +138,9 @@ export default function ManagerSamplingPage({ params }: { params: { id: string }
               </Button>
             }
           />
+          <div className="px-1">
+            <SamplingLegend />
+          </div>
         </Card>
 
         <Card className="space-y-4">
