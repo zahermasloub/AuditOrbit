@@ -9,3 +9,10 @@ __pycache__/
 
 # Env
 .env
+
+# Lighthouse Reports
+web/.lighthouse/
+
+# Playwright Test Results (keep screenshots for baseline tracking)
+web/test-results/
+web/playwright-report/
