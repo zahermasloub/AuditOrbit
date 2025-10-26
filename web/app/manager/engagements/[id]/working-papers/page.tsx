@@ -10,6 +10,7 @@ import { Input, Textarea } from "@/app/components/ui/Input";
 import { DataTable, type DataTableColumn } from "@/app/components/table/DataTable";
 import { DataTableToolbar } from "@/app/components/table/DataTableToolbar";
 import { apiFetch } from "@/app/lib/apiFetch";
+import ModalEditWP from "./_modals/ModalEditWP";
 
 const SIDEBAR_ITEMS = [
   { href: "/manager/dashboard", label: "لوحة المدير" },
@@ -53,6 +54,7 @@ export default function ManagerWorkingPapersPage({ params }: { params: { id: str
   const [wpRef, setWpRef] = useState("");
   const [objective, setObjective] = useState("");
   const [procedure, setProcedure] = useState("");
+  const [editingWP, setEditingWP] = useState<WorkingPaper | null>(null);
 
   const { data: workingPapers = [], isLoading } = useQuery<WorkingPaper[]>({
     queryKey: ["manager-working-papers", engagementId],
@@ -117,11 +119,8 @@ export default function ManagerWorkingPapersPage({ params }: { params: { id: str
         header: "إجراءات",
         cell: ({ row }) => (
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => console.log("Edit WP:", row.id)}>
+            <Button variant="ghost" size="sm" onClick={() => setEditingWP(row)}>
               تعديل
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => console.log("Delete WP:", row.id)}>
-              حذف
             </Button>
           </div>
         ),
@@ -228,6 +227,20 @@ export default function ManagerWorkingPapersPage({ params }: { params: { id: str
           </Card>
         )}
       </div>
+      {editingWP && (
+        <ModalEditWP
+          open={true}
+          onCloseAction={() => setEditingWP(null)}
+          defaults={{
+            id: editingWP.id,
+            objective: editingWP.objective,
+            procedure: editingWP.procedure || undefined,
+            prepared_at: editingWP.prepared_at || undefined,
+            reviewed_at: editingWP.reviewed_at || undefined,
+          }}
+          engagementId={engagementId}
+        />
+      )}
     </AppShell>
   );
 }

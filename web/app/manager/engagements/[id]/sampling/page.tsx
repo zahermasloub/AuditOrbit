@@ -13,6 +13,7 @@ import { managerLinks } from "@/app/manager/_nav/links";
 import { DataTable, type DataTableColumn } from "@/app/components/table/DataTable";
 import { DataTableToolbar } from "@/app/components/table/DataTableToolbar";
 import { apiFetch } from "@/app/lib/apiFetch";
+import ModalEditSample from "./_modals/ModalEditSample";
 
 type Sample = {
   id: string;
@@ -52,6 +53,7 @@ export default function ManagerSamplingPage({ params }: { params: { id: string }
   const [search, setSearch] = useState("");
   const [method, setMethod] = useState("random");
   const [size, setSize] = useState("10");
+  const [editingSample, setEditingSample] = useState<Sample | null>(null);
 
   const { data: samples = [], isLoading } = useQuery<Sample[]>({
     queryKey: ["manager-samples", engagementId],
@@ -107,11 +109,8 @@ export default function ManagerSamplingPage({ params }: { params: { id: string }
         header: "إجراءات",
         cell: ({ row }) => (
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => console.log("Edit Sample:", row.id)}>
+            <Button variant="ghost" size="sm" onClick={() => setEditingSample(row)}>
               تعديل
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => console.log("Delete Sample:", row.id)}>
-              حذف
             </Button>
           </div>
         ),
@@ -220,6 +219,18 @@ export default function ManagerSamplingPage({ params }: { params: { id: string }
           </Card>
         )}
       </div>
+      {editingSample && (
+        <ModalEditSample
+          open={true}
+          onCloseAction={() => setEditingSample(null)}
+          defaults={{
+            id: editingSample.id,
+            method: editingSample.method as "random" | "systematic" | "high_value",
+            size: editingSample.size,
+          }}
+          engagementId={engagementId}
+        />
+      )}
     </AppShell>
   );
 }
