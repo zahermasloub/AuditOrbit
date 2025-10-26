@@ -1,4 +1,6 @@
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from typing import Any
 
-limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
+from slowapi import Limiter  # type: ignore[import]
+from slowapi.util import get_remote_address  # type: ignore[import]
+
+limiter: Any = Limiter(key_func=get_remote_address, default_limits=["200/minute"])

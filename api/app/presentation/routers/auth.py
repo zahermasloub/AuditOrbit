@@ -9,6 +9,7 @@ from ...application.dtos.auth import LoginIn, TokenOut
 from ...infrastructure.db.session import SessionLocal
 from ...infrastructure.security.jwt import create_token, decode_token
 from ...infrastructure.security.passwords import verify_password
+from ..middlewares.rate_limit import limiter
 
 router = APIRouter()
 
@@ -22,6 +23,7 @@ def get_db() -> Generator[Session, None, None]:
 
 
 @router.post("/login", response_model=TokenOut)
+@limiter.exempt
 def login(payload: LoginIn, db: Session = Depends(get_db)) -> TokenOut:
   user = db.execute(
     text(

@@ -1,8 +1,8 @@
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
+from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
@@ -31,23 +31,27 @@ from .routers import (
 app = FastAPI(title="AuditOrbit API", version="0.2.0", docs_url="/docs", redoc_url="/redoc")
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SecurityHeadersMiddleware)
 app.middleware("http")(audit_log_middleware)
 
-raw_origins = os.getenv("WEB_ORIGINS")
-if raw_origins:
-  origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
-else:
-  origins = [os.getenv("WEB_ORIGIN", "http://localhost:3000")]
+origins = [
+  origin.strip()
+  for origin in os.getenv("WEB_ORIGINS", os.getenv("WEB_ORIGIN", "http://localhost:3000")).split(",")
+  if origin.strip()
+]
 
 app.add_middleware(
   CORSMiddleware,
   allow_origins=origins,
   allow_credentials=True,
-  allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allow_methods=["*"],
   allow_headers=["*"],
 )
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc) -> JSONResponse:  # type: ignore[no-untyped-def]
+  return JSONResponse(status_code=429, content={"detail": "Too Many Requests"})
 
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(users.router, prefix="/users", tags=["users"])
@@ -68,5 +72,6 @@ app.include_router(audit.router, tags=["audit"])
 
 
 @app.get("/health", tags=["ops"])
+@limiter.exempt
 def health() -> dict[str, str]:
   return {"name": "AuditOrbit", "status": "ok"}
