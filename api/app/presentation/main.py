@@ -33,20 +33,13 @@ from .routers import (
 app = FastAPI(title="AuditOrbit API", version="0.2.0", docs_url="/docs", redoc_url="/redoc", debug=True)
 app.state.limiter = limiter
 
-# Debug middleware - FIRST to catch all requests
-@app.middleware("http")
-async def debug_middleware(request: Request, call_next):
-  print(f"🔵 Incoming Request: {request.method} {request.url.path}")
-  print(f"   Headers: {dict(request.headers)}")
-  try:
-    response = await call_next(request)
-    print(f"🟢 Response Status: {response.status_code}")
-    return response
-  except Exception as e:
-    print(f"🔴 EXCEPTION in middleware chain: {type(e).__name__}: {str(e)}")
-    import traceback
-    traceback.print_exc()
-    raise
+# Debug middleware removed (Unicode emoji issue on Windows)
+# @app.middleware("http")
+# async def debug_middleware(request: Request, call_next):
+#   print(f"Incoming: {request.method} {request.url.path}")
+#   response = await call_next(request)
+#   print(f"Response: {response.status_code}")
+#   return response
 
 # app.add_middleware(SlowAPIMiddleware)  # DISABLED FOR DEBUG
 # app.add_middleware(SecurityHeadersMiddleware)  # DISABLED FOR DEBUG
@@ -56,10 +49,16 @@ async def debug_middleware(request: Request, call_next):
 setup_exception_handlers(app)
 
 origins = [
-  origin.strip()
-  for origin in os.getenv("WEB_ORIGINS", os.getenv("WEB_ORIGIN", "http://localhost:3000")).split(",")
-  if origin.strip()
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "*" # Wildcard for debugging - NOT FOR PRODUCTION
 ]
+
+# origins = [
+#   origin.strip()
+#   for origin in os.getenv("WEB_ORIGINS", os.getenv("WEB_ORIGIN", "http://localhost:3000")).split(",")
+#   if origin.strip()
+# ]
 
 app.add_middleware(
   CORSMiddleware,

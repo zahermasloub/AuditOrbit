@@ -123,7 +123,7 @@ export function EngagementsSection() {
     priority: "medium",
     startDate: "",
     endDate: "",
-    estimatedHours: 0,
+    estimatedHours: "",
     objectives: "",
     criteria: "",
   })
@@ -144,11 +144,20 @@ export function EngagementsSection() {
         annual_plan_year: formData.annual_plan_year,
       })
       setShowCreateDialog(false)
+      // Reset all fields to their initial values to prevent undefined
       setFormData({
         title: "",
         scope: "",
         risk_rating: "medium",
         annual_plan_year: new Date().getFullYear(),
+        description: "",
+        department: "",
+        priority: "medium",
+        startDate: "",
+        endDate: "",
+        estimatedHours: "",
+        objectives: "",
+        criteria: "",
       })
     } catch (err) {
       console.error("Failed to create engagement:", err)
@@ -442,7 +451,7 @@ export function EngagementsSection() {
               <Input
                 id="title"
                 placeholder="تدقيق نظام المشتريات"
-                value={formData.title}
+                value={formData.title || ""}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white"
               />
@@ -454,7 +463,7 @@ export function EngagementsSection() {
               <Textarea
                 id="description"
                 placeholder="وصف شامل للمهمة التدقيقية..."
-                value={formData.description}
+                value={formData.description || ""}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white min-h-20"
               />
@@ -465,7 +474,7 @@ export function EngagementsSection() {
                   الإدارة
                 </Label>
                 <Select
-                  value={formData.department}
+                  value={formData.department || ""}
                   onValueChange={(value) => setFormData({ ...formData, department: value })}
                 >
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
@@ -485,7 +494,7 @@ export function EngagementsSection() {
                   الأولوية
                 </Label>
                 <Select
-                  value={formData.priority}
+                  value={formData.priority || ""}
                   onValueChange={(value) => setFormData({ ...formData, priority: value as EngagementForm['priority'] })}
                 >
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
@@ -508,7 +517,7 @@ export function EngagementsSection() {
                 <Input
                   id="startDate"
                   type="date"
-                  value={formData.startDate}
+                  value={formData.startDate || ""}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                   className="bg-slate-800 border-slate-700 text-white"
                 />
@@ -520,7 +529,7 @@ export function EngagementsSection() {
                 <Input
                   id="endDate"
                   type="date"
-                  value={formData.endDate}
+                  value={formData.endDate || ""}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                   className="bg-slate-800 border-slate-700 text-white"
                 />
@@ -533,7 +542,7 @@ export function EngagementsSection() {
                   id="estimatedHours"
                   type="number"
                   placeholder="120"
-                  value={formData.estimatedHours}
+                  value={formData.estimatedHours || ""}
                   onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
                   className="bg-slate-800 border-slate-700 text-white"
                 />
@@ -546,7 +555,7 @@ export function EngagementsSection() {
               <Textarea
                 id="objectives"
                 placeholder="تقييم فعالية الضوابط&#10;التحقق من الامتثال للسياسات&#10;تقييم كفاءة العمليات"
-                value={formData.objectives}
+                value={formData.objectives || ""}
                 onChange={(e) => setFormData({ ...formData, objectives: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white min-h-24"
               />
@@ -558,7 +567,7 @@ export function EngagementsSection() {
               <Textarea
                 id="scope"
                 placeholder="جميع عمليات المشتريات للربع الأخير من 2024"
-                value={formData.scope}
+                value={formData.scope || ""}
                 onChange={(e) => setFormData({ ...formData, scope: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white min-h-20"
               />
@@ -570,7 +579,7 @@ export function EngagementsSection() {
               <Textarea
                 id="criteria"
                 placeholder="سياسات المشتريات الداخلية، معايير ISO 9001"
-                value={formData.criteria}
+                value={formData.criteria || ""}
                 onChange={(e) => setFormData({ ...formData, criteria: e.target.value })}
                 className="bg-slate-800 border-slate-700 text-white min-h-20"
               />

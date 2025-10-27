@@ -46,6 +46,15 @@ export class ApiClient {
     }
 
     const url = `${this.baseURL}${endpoint}`
+    
+    // Debug logging
+    console.log('🔍 API Request:', {
+      url,
+      method: options.method || 'GET',
+      hasToken: !!token,
+      headers
+    })
+    
     const response = await fetch(url, {
       ...options,
       headers,
@@ -55,9 +64,10 @@ export class ApiClient {
 
     if (!response.ok) {
       const error = data as ApiError
-      console.error('API Error:', {
+      console.error('❌ API Error:', {
         url,
         status: response.status,
+        statusText: response.statusText,
         error: data
       })
       
@@ -105,7 +115,8 @@ export class ApiClient {
 // Default client instance
 export const apiClient = new ApiClient(API_BASE_URL, () => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('access_token')
+    // Try both keys for compatibility
+    return localStorage.getItem('auth_token') || localStorage.getItem('access_token')
   }
   return null
 })

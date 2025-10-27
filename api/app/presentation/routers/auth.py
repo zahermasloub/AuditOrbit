@@ -25,38 +25,33 @@ def get_db() -> Generator[Session, None, None]:
 @router.post("/login", response_model=TokenOut)
 @limiter.exempt
 def login(payload: LoginIn, db: Session = Depends(get_db)) -> TokenOut:
-  print(f"🔍 Login attempt for: {payload.email}")
+  # Login attempt
   
   try:
     user = db.execute(
       text(
-        'SELECT id, email, name, password as hashed_password, locale FROM users WHERE email = :email'
+        '''SELECT u.id, u.email, u.name, u.password as hashed_password, u.locale, r.name as role
+        FROM users u
+        LEFT JOIN user_roles ur ON u.id = ur."userId"
+        LEFT JOIN roles r ON ur."roleId" = r.id
+        WHERE u.email = :email'''
       ),
       {"email": payload.email},
     ).mappings().first()
     
-    print(f"🔍 User found: {user is not None}")
+    print(f"DEBUG: Fetched user: {user}")
+    print(f"DEBUG: Provided password: {payload.password}")
     
     if not user:
-      print("❌ User not found")
       raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Bad credentials")
-    
-    print(f"🔍 Verifying password...")
-    print(f"   Password length: {len(payload.password)}")
-    print(f"   Hash starts with: {user['hashed_password'][:10]}")
     
     password_valid = verify_password(payload.password, user["hashed_password"])
-    print(f"🔍 Password valid: {password_valid}")
     
     if not password_valid:
-      print("❌ Invalid password")
       raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Bad credentials")
     
-    print(f"🔍 Creating tokens for user ID: {user['id']}")
     access_token = create_token(str(user["id"]), 3600)
     refresh_token = create_token(str(user["id"]), 86400)
-    
-    print(f"✅ Login successful")
     
     return TokenOut(
       access_token=access_token,
