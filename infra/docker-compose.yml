@@ -34,7 +34,7 @@ services:
       - "8000:8000"
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2024-09-09T16-59-28Z
+    image: minio/minio:latest
     restart: unless-stopped
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-auditorbit}
