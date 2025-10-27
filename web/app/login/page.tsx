@@ -8,24 +8,52 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { apiClient, safeApiCall, TokenManager } from "@/lib/api-client"
+import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setError("")
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      const response = await apiClient.POST('/auth/login', {
+        body: {
+          email: email,
+          password: password
+        }
+      })
 
-    console.log("[v0] Login attempt:", { email })
-
-    // Redirect to dashboard
-    window.location.href = "/dashboard"
+      if (response.data) {
+        const tokenData = response.data as any
+        
+        // حفظ الـ Token
+        if (tokenData.access_token) {
+          TokenManager.setToken(tokenData.access_token)
+        }
+        if (tokenData.refresh_token) {
+          TokenManager.setRefreshToken(tokenData.refresh_token)
+        }
+        
+        // الانتقال للـ Dashboard
+        window.location.href = "/dashboard"
+      } else if (response.error) {
+        // عرض رسالة الخطأ
+        setError('بيانات تسجيل الدخول غير صحيحة')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('حدث خطأ أثناء تسجيل الدخول')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -108,6 +136,13 @@ export default function LoginPage() {
               </a>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
+                {error}
+              </div>
+            )}
+
             {/* Login Button */}
             <Button
               type="submit"
@@ -130,16 +165,13 @@ export default function LoginPage() {
 
           {/* Demo Credentials */}
           <div className="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
-            <p className="text-xs text-slate-400 text-center mb-2">حسابات تجريبية:</p>
-            <div className="space-y-1 text-xs text-slate-300 font-mono">
+            <p className="text-xs text-slate-400 text-center mb-2">للاختبار استخدم:</p>
+            <div className="space-y-1 text-xs text-slate-300 font-mono text-center">
               <p>
-                <span className="text-indigo-400">Admin:</span> admin@audit.com / admin123
+                <span className="text-indigo-400">البريد:</span> admin@example.com
               </p>
               <p>
-                <span className="text-cyan-400">Manager:</span> manager@audit.com / manager123
-              </p>
-              <p>
-                <span className="text-emerald-400">Auditor:</span> auditor@audit.com / auditor123
+                <span className="text-cyan-400">كلمة المرور:</span> Admin#2025
               </p>
             </div>
           </div>

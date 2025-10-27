@@ -1,15 +1,17 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-  DATABASE_URL: str = "postgresql+psycopg://audit:auditpw@db:5432/auditdb"
-  JWT_SECRET: str = "devsecret"
-  REDIS_URL: str = "redis://redis:6379/0"
-  S3_ENDPOINT: str = "http://minio:9000"
-  S3_BUCKET: str = "auditevidence"
+  model_config = SettingsConfigDict(
+    env_file=".env",
+    extra="ignore"  # Ignore extra fields from .env file
+  )
 
-  class Config:
-    env_file = ".env"
+  DATABASE_URL: str = "postgresql+psycopg://audit:auditpw@localhost:5432/auditdb"
+  JWT_SECRET: str = "devsecret"
+  REDIS_URL: str = "redis://localhost:6379/0"
+  S3_ENDPOINT: str = "http://localhost:9000"
+  S3_BUCKET: str = "auditevidence"
 
 
 settings = Settings()

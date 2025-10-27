@@ -17,6 +17,7 @@ from .routers import (
   auth,
   checklists,
   compare,
+  dashboard,
   engagements,
   evidence,
   followups,
@@ -60,6 +61,7 @@ async def rate_limit_handler(request: Request, exc) -> JSONResponse:  # type: ig
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(roles.router, prefix="/roles", tags=["roles"])
+app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(engagements.router, prefix="/engagements", tags=["engagements"])
 app.include_router(checklists.router, prefix="/checklists", tags=["checklists"])
 app.include_router(evidence.router, prefix="/evidence", tags=["evidence"])
