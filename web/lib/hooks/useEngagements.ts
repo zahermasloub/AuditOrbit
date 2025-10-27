@@ -43,21 +43,6 @@ export function useEngagements(filters: EngagementsFilters = {}) {
     }
   }
 
-  async function deleteEngagement(id: string) {
-    try {
-      setLoading(true)
-      setError(null)
-      await engagementsApi.delete(id)
-      setEngagements(prev => prev.filter(e => e.id !== id))
-      setTotal(prev => prev - 1)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete engagement')
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
-
   function refresh() {
     loadEngagements()
   }
@@ -70,7 +55,6 @@ export function useEngagements(filters: EngagementsFilters = {}) {
     error,
     setPage,
     createEngagement,
-    deleteEngagement,
     refresh,
   }
 }

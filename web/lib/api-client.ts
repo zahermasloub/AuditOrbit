@@ -5,7 +5,11 @@
 import createClient from 'openapi-fetch'
 import type { paths } from './types.gen'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_BASE ||
+  'http://localhost:8000'
 
 export const apiClient = createClient<paths>({
   baseUrl: BACKEND_URL,

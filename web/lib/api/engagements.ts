@@ -1,21 +1,31 @@
 import { apiClient } from './client'
 
+export type EngagementStatus =
+  | 'DRAFT'
+  | 'PLANNING'
+  | 'IN_PROGRESS'
+  | 'FIELDWORK'
+  | 'REPORTING'
+  | 'REVIEW'
+  | 'COMPLETED'
+  | 'CANCELLED'
+
 export interface Engagement {
   id: string
   annual_plan_id: string
   title: string
-  scope: string
-  risk_rating: 'high' | 'medium' | 'low'
-  status: 'planned' | 'in_progress' | 'review' | 'completed' | 'cancelled'
-  start_date: string | null
-  end_date: string | null
+  scope?: string | null
+  risk_rating?: string | null
+  status: EngagementStatus
+  start_date?: string | null
+  end_date?: string | null
   created_at: string
 }
 
 export interface EngagementCreate {
   title: string
-  scope: string
-  risk_rating: 'high' | 'medium' | 'low'
+  scope?: string
+  risk_rating?: 'high' | 'medium' | 'low'
   annual_plan_year: number
 }
 
@@ -56,26 +66,5 @@ export const engagementsApi = {
     return response.data
   },
 
-  /**
-   * Get a single engagement by ID
-   */
-  async get(id: string): Promise<Engagement> {
-    const response = await apiClient.get<Engagement>(`/engagements/${id}`)
-    return response.data
-  },
-
-  /**
-   * Update an engagement
-   */
-  async update(id: string, data: Partial<EngagementCreate>): Promise<Engagement> {
-    const response = await apiClient.put<Engagement>(`/engagements/${id}`, data)
-    return response.data
-  },
-
-  /**
-   * Delete an engagement
-   */
-  async delete(id: string): Promise<void> {
-    await apiClient.delete(`/engagements/${id}`)
-  },
+  // Additional endpoints (get/update/delete) are not yet exposed by the API.
 }

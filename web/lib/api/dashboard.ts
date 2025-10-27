@@ -22,8 +22,10 @@ export interface RecentEngagement {
   title: string
   status: string
   progress: number
-  start_date: string
-  end_date: string
+  start_date: string | null
+  end_date: string | null
+  priority?: string | null
+  department?: string | null
 }
 
 export const dashboardApi = {

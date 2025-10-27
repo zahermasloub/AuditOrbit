@@ -36,24 +36,36 @@ def list_users(
   user_id: str = Depends(current_user_id),
 ) -> PageOut:
   enforce(db, user_id, "users", "read")
-  total = int(db.execute(text("SELECT count(*) FROM users")).scalar_one())
+  total = int(db.execute(text('SELECT count(*) FROM users')).scalar_one())
   rows = db.execute(
     text(
       """
-        SELECT id, email, name, locale, tz, active
-        FROM users ORDER BY created_at DESC OFFSET :offset LIMIT :limit
+        SELECT
+          id::text AS id,
+          email,
+          name,
+          role,
+          locale,
+          to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
+          to_char("updatedAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
+        FROM users
+        ORDER BY "createdAt" DESC
+        OFFSET :offset LIMIT :limit
       """
     ),
     {"offset": (page - 1) * size, "limit": size},
   ).mappings().all()
   items = [
     UserOut(
-      id=str(row["id"]),
+      id=row["id"],
       email=row["email"],
       name=row["name"],
-      locale=row["locale"],
-      tz=row["tz"],
-      active=row["active"],
+      role=row.get("role"),
+      locale=row.get("locale"),
+      timezone=None,
+      active=None,
+      created_at=row.get("created_at"),
+      updated_at=row.get("updated_at"),
     )
     for row in rows
   ]
@@ -70,21 +82,37 @@ def create_user(
   created = db.execute(
     text(
       """
-        INSERT INTO users (email, name, hashed_password)
-        VALUES (:email, :name, :password)
-        RETURNING id, email, name, locale, tz, active
+        INSERT INTO users (email, name, password, role, locale, "createdAt", "updatedAt")
+        VALUES (:email, :name, :password, :role, :locale, now(), now())
+        RETURNING
+          id::text AS id,
+          email,
+          name,
+          role,
+          locale,
+          to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
+          to_char("updatedAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
       """
     ),
-    {"email": payload.email, "name": payload.name, "password": hash_password(payload.password)},
+    {
+      "email": payload.email,
+      "name": payload.name,
+      "password": hash_password(payload.password),
+      "role": payload.role or "User",
+      "locale": payload.locale or "ar",
+    },
   ).mappings().first()
   db.commit()
   if created is None:
     raise HTTPException(status_code=500, detail="Failed to create user")
   return UserOut(
-    id=str(created["id"]),
+    id=created["id"],
     email=created["email"],
     name=created["name"],
-    locale=created["locale"],
-    tz=created["tz"],
-    active=created["active"],
+    role=created.get("role"),
+    locale=created.get("locale"),
+    timezone=None,
+    active=None,
+    created_at=created.get("created_at"),
+    updated_at=created.get("updated_at"),
   )

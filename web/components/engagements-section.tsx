@@ -1,507 +1,290 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import {
-  Plus,
-  FileText,
-  Edit,
-  Trash2,
-  Eye,
-  Calendar,
-  Users,
-  Target,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Building2,
-  Loader2,
-} from "lucide-react"
+import { useMemo, useState } from "react"
+import { Plus, FileText, Calendar, Target, Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useEngagements } from "@/lib/hooks/useEngagements"
-import { Engagement as ApiEngagement } from "@/lib/api"
+import type { Engagement, EngagementCreate, EngagementStatus } from "@/lib/api"
 
-// Map API status to display status
-const statusMap: Record<string, "planning" | "fieldwork" | "reporting" | "follow-up" | "completed"> = {
-  planned: "planning",
-  in_progress: "fieldwork",
-  review: "reporting",
-  completed: "completed",
-  cancelled: "completed",
+const statusLabels: Record<EngagementStatus, string> = {
+  DRAFT: "مسودة",
+  PLANNING: "تخطيط",
+  IN_PROGRESS: "قيد التنفيذ",
+  FIELDWORK: "عمل ميداني",
+  REPORTING: "إعداد التقرير",
+  REVIEW: "مراجعة",
+  COMPLETED: "مكتمل",
+  CANCELLED: "ملغى",
 }
 
-// Map API risk_rating to display riskLevel
-const riskMap: Record<string, "high" | "medium" | "low"> = {
-  high: "high",
-  medium: "medium",
-  low: "low",
+const statusColors: Record<EngagementStatus, string> = {
+  DRAFT: "bg-slate-500/20 text-slate-200 border-slate-500/30",
+  PLANNING: "bg-indigo-500/20 text-indigo-200 border-indigo-500/30",
+  IN_PROGRESS: "bg-blue-500/20 text-blue-200 border-blue-500/30",
+  FIELDWORK: "bg-amber-500/20 text-amber-200 border-amber-500/30",
+  REPORTING: "bg-cyan-500/20 text-cyan-200 border-cyan-500/30",
+  REVIEW: "bg-purple-500/20 text-purple-200 border-purple-500/30",
+  COMPLETED: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
+  CANCELLED: "bg-rose-500/20 text-rose-200 border-rose-500/30",
 }
 
-interface Engagement {
+const riskLabels: Record<string, string> = {
+  high: "عالي",
+  medium: "متوسط",
+  low: "منخفض",
+}
+
+const riskColors: Record<string, string> = {
+  high: "bg-rose-500/20 text-rose-200 border-rose-500/30",
+  medium: "bg-yellow-500/20 text-yellow-200 border-yellow-500/30",
+  low: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
+}
+
+type UiEngagement = {
   id: string
   title: string
-  description?: string
-  department?: string
-  status: "planning" | "fieldwork" | "reporting" | "follow-up" | "completed"
-  priority?: "critical" | "high" | "medium" | "low"
-  progress?: number
-  startDate?: string
-  endDate?: string
-  assignedAuditors?: string[]
-  objectives?: string[]
   scope: string
-  criteria?: string
-  estimatedHours?: number
-  actualHours?: number
-  riskLevel: "high" | "medium" | "low"
+  status: EngagementStatus
+  riskRating: string
+  startDate?: string | null
+  endDate?: string | null
+  createdAt: string
 }
 
-interface EngagementForm {
-  title: string
-  scope: string
-  risk_rating: "high" | "medium" | "low"
-  annual_plan_year: number
-  description?: string
-  department?: string
-  priority?: "critical" | "high" | "medium" | "low"
-  startDate?: string
-  endDate?: string
-  estimatedHours?: number | string
-  objectives?: string
-  criteria?: string
-}
-
-function mapApiToLocal(apiEngagement: ApiEngagement): Engagement {
+function toUiEngagement(engagement: Engagement): UiEngagement {
   return {
-    id: apiEngagement.id,
-    title: apiEngagement.title,
-    scope: apiEngagement.scope ?? "",
-    status: statusMap[apiEngagement.status] || "planning",
-    riskLevel: riskMap[apiEngagement.risk_rating] || "medium",
-    startDate: apiEngagement.start_date || undefined,
-    endDate: apiEngagement.end_date || undefined,
-    description: apiEngagement.description ?? "",
-    department: apiEngagement.department ?? "",
-    priority: (apiEngagement.priority as any) ?? "medium",
-    progress: apiEngagement.progress ?? 0,
-    assignedAuditors: apiEngagement.assigned_auditors ?? [],
-    objectives: apiEngagement.objectives ?? [],
-    estimatedHours: apiEngagement.estimated_hours ?? 0,
-    actualHours: apiEngagement.actual_hours ?? 0,
+    id: engagement.id,
+    title: engagement.title,
+    scope: engagement.scope ?? "غير محدد",
+    status: engagement.status,
+    riskRating: (engagement.risk_rating ?? "medium").toLowerCase(),
+    startDate: engagement.start_date,
+    endDate: engagement.end_date,
+    createdAt: engagement.created_at,
   }
 }
 
 export function EngagementsSection() {
-  const { 
-    engagements: apiEngagements, 
-    loading, 
+  const {
+    engagements: apiEngagements,
+    loading,
     error,
-    createEngagement: createApiEngagement,
-    deleteEngagement: deleteApiEngagement,
-    refresh 
+    createEngagement,
+    refresh,
   } = useEngagements({ page: 1, size: 20 })
 
-  const [engagements, setEngagements] = useState<Engagement[]>([])
+  const engagements = useMemo(() => apiEngagements.map(toUiEngagement), [apiEngagements])
+
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [showViewDialog, setShowViewDialog] = useState(false)
-  const [selectedEngagement, setSelectedEngagement] = useState<Engagement | null>(null)
-  const [formData, setFormData] = useState<EngagementForm>({
+  const [selectedEngagement, setSelectedEngagement] = useState<UiEngagement | null>(null)
+  const [formData, setFormData] = useState<EngagementCreate>({
     title: "",
     scope: "",
     risk_rating: "medium",
     annual_plan_year: new Date().getFullYear(),
-    description: "",
-    department: "",
-    priority: "medium",
-    startDate: "",
-    endDate: "",
-    estimatedHours: "",
-    objectives: "",
-    criteria: "",
   })
+  const [submissionError, setSubmissionError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  // Map API engagements to local format
-  useEffect(() => {
-    if (apiEngagements) {
-      setEngagements(apiEngagements.map(mapApiToLocal))
+  const handleCreate = async () => {
+    if (!formData.title.trim()) {
+      setSubmissionError("يرجى إدخال عنوان المهمة")
+      return
     }
-  }, [apiEngagements])
 
-  const handleCreateEngagement = async () => {
     try {
-      await createApiEngagement({
-        title: formData.title,
-        scope: formData.scope,
+      setSubmitting(true)
+      setSubmissionError(null)
+      await createEngagement({
+        title: formData.title.trim(),
+        scope: formData.scope?.trim() || undefined,
         risk_rating: formData.risk_rating,
         annual_plan_year: formData.annual_plan_year,
       })
-      setShowCreateDialog(false)
-      // Reset all fields to their initial values to prevent undefined
       setFormData({
         title: "",
         scope: "",
         risk_rating: "medium",
         annual_plan_year: new Date().getFullYear(),
-        description: "",
-        department: "",
-        priority: "medium",
-        startDate: "",
-        endDate: "",
-        estimatedHours: "",
-        objectives: "",
-        criteria: "",
       })
+      setShowCreateDialog(false)
+      refresh()
     } catch (err) {
-      console.error("Failed to create engagement:", err)
-      alert("فشل في إنشاء المهمة التدقيقية")
+      setSubmissionError(err instanceof Error ? err.message : "فشل إنشاء المهمة")
+    } finally {
+      setSubmitting(false)
     }
-  }
-
-  const handleDeleteEngagement = async (id: string) => {
-    if (confirm("هل أنت متأكد من حذف هذه المهمة التدقيقية؟")) {
-      try {
-        await deleteApiEngagement(id)
-      } catch (err) {
-        console.error("Failed to delete engagement:", err)
-        alert("فشل في حذف المهمة التدقيقية")
-      }
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "planning":
-        return "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
-      case "fieldwork":
-        return "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
-      case "reporting":
-        return "bg-orange-500/20 text-orange-300 border-orange-500/30"
-      case "follow-up":
-        return "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
-      case "completed":
-        return "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-      default:
-        return ""
-    }
-  }
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "planning":
-        return "التخطيط"
-      case "fieldwork":
-        return "العمل الميداني"
-      case "reporting":
-        return "إعداد التقرير"
-      case "follow-up":
-        return "المتابعة"
-      case "completed":
-        return "مكتمل"
-      default:
-        return status
-    }
-  }
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return "destructive"
-      case "high":
-        return "default"
-      case "medium":
-        return "secondary"
-      case "low":
-        return "outline"
-      default:
-        return "secondary"
-    }
-  }
-
-  const getPriorityLabel = (priority: string) => {
-    switch (priority) {
-      case "critical":
-        return "حرج"
-      case "high":
-        return "عالي"
-      case "medium":
-        return "متوسط"
-      case "low":
-        return "منخفض"
-      default:
-        return priority
-    }
-  }
-
-  const statusCounts = {
-    planning: engagements.filter((e) => e.status === "planning").length,
-    fieldwork: engagements.filter((e) => e.status === "fieldwork").length,
-    reporting: engagements.filter((e) => e.status === "reporting").length,
-    followUp: engagements.filter((e) => e.status === "follow-up").length,
-    completed: engagements.filter((e) => e.status === "completed").length,
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-bold text-white">المهام التدقيقية</h3>
-          <p className="text-slate-400 mt-1">إدارة دورة حياة المهام التدقيقية الكاملة</p>
+          <h3 className="text-2xl font-bold text-white">المهام الرقابية</h3>
+          <p className="text-slate-400 mt-1">عرض المهام المضافة من قاعدة البيانات المحدثة</p>
         </div>
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
-        >
-          <Plus className="h-4 w-4 ml-2" />
-          مهمة جديدة
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="border-slate-700 text-slate-200" onClick={refresh} disabled={loading}>
+            <RefreshCw className="h-4 w-4 ml-2" /> تحديث
+          </Button>
+          <Button onClick={() => setShowCreateDialog(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Plus className="h-4 w-4 ml-2" /> مهمة جديدة
+          </Button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">التخطيط</p>
-                <p className="text-3xl font-bold text-cyan-400">{statusCounts.planning}</p>
-              </div>
-              <Target className="h-10 w-10 text-cyan-400" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">العمل الميداني</p>
-                <p className="text-3xl font-bold text-indigo-400">{statusCounts.fieldwork}</p>
-              </div>
-              <FileText className="h-10 w-10 text-indigo-400" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">إعداد التقرير</p>
-                <p className="text-3xl font-bold text-orange-400">{statusCounts.reporting}</p>
-              </div>
-              <AlertCircle className="h-10 w-10 text-orange-400" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">المتابعة</p>
-                <p className="text-3xl font-bold text-yellow-400">{statusCounts.followUp}</p>
-              </div>
-              <Clock className="h-10 w-10 text-yellow-400" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">مكتمل</p>
-                <p className="text-3xl font-bold text-emerald-400">{statusCounts.completed}</p>
-              </div>
-              <CheckCircle2 className="h-10 w-10 text-emerald-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {error && (
+        <div className="p-3 border border-rose-500/40 bg-rose-500/10 text-rose-200 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
 
-      {/* Engagements List */}
-      <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {loading && engagements.length === 0 && (
+          <Card className="bg-slate-900 border-slate-800 md:col-span-2 xl:col-span-3">
+            <CardContent className="flex items-center justify-center gap-3 py-12 text-slate-300">
+              <Loader2 className="h-5 w-5 animate-spin" /> يجري تحميل المهام...
+            </CardContent>
+          </Card>
+        )}
+
+        {!loading && engagements.length === 0 && (
+          <Card className="bg-slate-900 border-slate-800 md:col-span-2 xl:col-span-3">
+            <CardContent className="py-12 text-center text-slate-400">
+              لا توجد مهام مسجلة حتى الآن
+            </CardContent>
+          </Card>
+        )}
+
         {engagements.map((engagement) => (
           <Card
             key={engagement.id}
-            className="bg-slate-900 border-slate-800 hover:border-indigo-500/50 transition-colors"
+            className="bg-slate-900 border-slate-800 hover:border-indigo-500/40 transition-colors"
           >
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-xl font-semibold text-white">{engagement.title}</h4>
-                    <Badge className={getStatusColor(engagement.status)}>{getStatusLabel(engagement.status)}</Badge>
-                    <Badge
-                      variant={getPriorityColor(engagement.priority ?? "medium")}
-                      className={
-                        engagement.priority === "high"
-                          ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
-                          : engagement.priority === "medium"
-                            ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
-                            : ""
-                      }
-                    >
-                      {getPriorityLabel(engagement.priority ?? "medium")}
-                    </Badge>
-                  </div>
-                  <p className="text-slate-400 text-sm mb-3">{engagement.description}</p>
-                  <div className="flex items-center gap-4 text-sm text-slate-400">
-                    <div className="flex items-center gap-1">
-                      <Building2 className="h-4 w-4" />
-                      <span>{engagement.department}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      <span>{engagement.assignedAuditors?.length ?? 0} مدقق</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {engagement.startDate} - {engagement.endDate}
-                      </span>
-                    </div>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                <FileText className="h-4 w-4 text-indigo-300" />
+                <span className="truncate" title={engagement.title}>
+                  {engagement.title}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className={statusColors[engagement.status]}>
+                  {statusLabels[engagement.status]}
+                </Badge>
+                <Badge variant="outline" className={riskColors[engagement.riskRating] ?? riskColors.medium}>
+                  {riskLabels[engagement.riskRating] ?? riskLabels.medium}
+                </Badge>
+              </div>
+
+              <div className="space-y-2 text-sm text-slate-300">
+                <p className="line-clamp-3 whitespace-pre-line">{engagement.scope}</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm text-slate-400">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <div>
+                    <p className="text-xs text-slate-500">بداية المهمة</p>
+                    <p className="text-slate-200">{engagement.startDate ?? "غير محدد"}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setSelectedEngagement(engagement)
-                      setShowViewDialog(true)
-                    }}
-                    className="text-slate-400 hover:text-white"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-slate-400 hover:text-red-400"
-                    onClick={() => handleDeleteEngagement(engagement.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  <div>
+                    <p className="text-xs text-slate-500">نهاية المهمة</p>
+                    <p className="text-slate-200">{engagement.endDate ?? "غير محدد"}</p>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                <div className="p-3 bg-slate-800/50 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">الساعات</p>
-                  <p className="text-lg font-semibold text-white">
-                    {engagement.actualHours ?? 0} / {engagement.estimatedHours ?? 0}
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-800/50 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">مستوى المخاطر</p>
-                  <Badge
-                    variant={engagement.riskLevel === "high" ? "destructive" : "secondary"}
-                    className={
-                      engagement.riskLevel === "medium"
-                        ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
-                        : engagement.riskLevel === "low"
-                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                          : ""
-                    }
-                  >
-                    {engagement.riskLevel === "high" ? "عالي" : engagement.riskLevel === "medium" ? "متوسط" : "منخفض"}
-                  </Badge>
-                </div>
-                <div className="p-3 bg-slate-800/50 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">الأهداف</p>
-                  <p className="text-lg font-semibold text-white">{engagement.objectives?.length ?? 0}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400">التقدم</span>
-                  <span className="text-white font-medium">{engagement.progress ?? 0}%</span>
-                </div>
-                <Progress value={engagement.progress ?? 0} className="h-2" />
-              </div>
+              <Button
+                variant="ghost"
+                className="w-full justify-center text-slate-200 hover:text-white"
+                onClick={() => setSelectedEngagement(engagement)}
+              >
+                <Target className="h-4 w-4 ml-2" /> عرض التفاصيل
+              </Button>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Create Engagement Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-2xl">إنشاء مهمة تدقيقية جديدة</DialogTitle>
+            <DialogTitle className="text-xl">إضافة مهمة رقابية</DialogTitle>
             <DialogDescription className="text-slate-400">
-              أدخل تفاصيل المهمة التدقيقية وفقاً لمعايير IIA
+              سيتم حفظ المهمة بالحد الأدنى من البيانات المطلوبة (العنوان، السنة، مستوى الخطورة).
             </DialogDescription>
           </DialogHeader>
+
           <div className="space-y-4 mt-4">
+            {submissionError && (
+              <div className="p-3 border border-rose-500/40 bg-rose-500/10 text-rose-200 rounded-lg text-sm">
+                {submissionError}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-slate-300">
-                عنوان المهمة
-              </Label>
+              <Label htmlFor="title">عنوان المهمة</Label>
               <Input
                 id="title"
-                placeholder="تدقيق نظام المشتريات"
-                value={formData.title || ""}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                value={formData.title}
+                onChange={(event) => setFormData((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="مراجعة إدارة المشتريات"
                 className="bg-slate-800 border-slate-700 text-white"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-slate-300">
-                الوصف
-              </Label>
+              <Label htmlFor="scope">نطاق المهمة</Label>
               <Textarea
-                id="description"
-                placeholder="وصف شامل للمهمة التدقيقية..."
-                value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white min-h-20"
+                id="scope"
+                value={formData.scope ?? ""}
+                onChange={(event) => setFormData((prev) => ({ ...prev, scope: event.target.value }))}
+                placeholder="ملخص نطاق المهمة أو الأهداف"
+                className="bg-slate-800 border-slate-700 text-white"
+                rows={3}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="department" className="text-slate-300">
-                  الإدارة
-                </Label>
-                <Select
-                  value={formData.department || ""}
-                  onValueChange={(value) => setFormData({ ...formData, department: value })}
-                >
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                    <SelectValue placeholder="اختر الإدارة" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    <SelectItem value="المالية">المالية</SelectItem>
-                    <SelectItem value="المشتريات">المشتريات</SelectItem>
-                    <SelectItem value="تقنية المعلومات">تقنية المعلومات</SelectItem>
-                    <SelectItem value="الموارد البشرية">الموارد البشرية</SelectItem>
-                    <SelectItem value="العمليات">العمليات</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="year">سنة الخطة</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  min="2000"
+                  max="2100"
+                  value={formData.annual_plan_year}
+                  onChange={(event) =>
+                    setFormData((prev) => ({ ...prev, annual_plan_year: Number(event.target.value) }))
+                  }
+                  className="bg-slate-800 border-slate-700 text-white"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="priority" className="text-slate-300">
-                  الأولوية
-                </Label>
+                <Label>مستوى الخطورة</Label>
                 <Select
-                  value={formData.priority || ""}
-                  onValueChange={(value) => setFormData({ ...formData, priority: value as EngagementForm['priority'] })}
+                  value={formData.risk_rating ?? "medium"}
+                  onValueChange={(value: "high" | "medium" | "low") =>
+                    setFormData((prev) => ({ ...prev, risk_rating: value }))
+                  }
                 >
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                    <SelectValue placeholder="اختر الأولوية" />
+                    <SelectValue placeholder="اختر المستوى" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                    <SelectItem value="critical">حرج</SelectItem>
+                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
                     <SelectItem value="high">عالي</SelectItem>
                     <SelectItem value="medium">متوسط</SelectItem>
                     <SelectItem value="low">منخفض</SelectItem>
@@ -509,215 +292,76 @@ export function EngagementsSection() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="startDate" className="text-slate-300">
-                  تاريخ البدء
-                </Label>
-                <Input
-                  id="startDate"
-                  type="date"
-                  value={formData.startDate || ""}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="endDate" className="text-slate-300">
-                  تاريخ الانتهاء
-                </Label>
-                <Input
-                  id="endDate"
-                  type="date"
-                  value={formData.endDate || ""}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="estimatedHours" className="text-slate-300">
-                  الساعات المقدرة
-                </Label>
-                <Input
-                  id="estimatedHours"
-                  type="number"
-                  placeholder="120"
-                  value={formData.estimatedHours || ""}
-                  onChange={(e) => setFormData({ ...formData, estimatedHours: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                className="border-slate-700 text-slate-200"
+                onClick={() => setShowCreateDialog(false)}
+                disabled={submitting}
+              >
+                إلغاء
+              </Button>
+              <Button
+                onClick={handleCreate}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                disabled={submitting}
+              >
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ"}
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="objectives" className="text-slate-300">
-                الأهداف (سطر لكل هدف)
-              </Label>
-              <Textarea
-                id="objectives"
-                placeholder="تقييم فعالية الضوابط&#10;التحقق من الامتثال للسياسات&#10;تقييم كفاءة العمليات"
-                value={formData.objectives || ""}
-                onChange={(e) => setFormData({ ...formData, objectives: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white min-h-24"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="scope" className="text-slate-300">
-                النطاق
-              </Label>
-              <Textarea
-                id="scope"
-                placeholder="جميع عمليات المشتريات للربع الأخير من 2024"
-                value={formData.scope || ""}
-                onChange={(e) => setFormData({ ...formData, scope: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white min-h-20"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="criteria" className="text-slate-300">
-                المعايير
-              </Label>
-              <Textarea
-                id="criteria"
-                placeholder="سياسات المشتريات الداخلية، معايير ISO 9001"
-                value={formData.criteria || ""}
-                onChange={(e) => setFormData({ ...formData, criteria: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white min-h-20"
-              />
-            </div>
-          </div>
-          <div className="flex gap-3 mt-6">
-            <Button
-              onClick={handleCreateEngagement}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
-            >
-              إنشاء المهمة
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateDialog(false)}
-              className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 bg-transparent"
-            >
-              إلغاء
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* View Engagement Dialog */}
-      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
+      <Dialog open={!!selectedEngagement} onOpenChange={(open) => !open && setSelectedEngagement(null)}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl">{selectedEngagement?.title}</DialogTitle>
-            <DialogDescription className="text-slate-400">{selectedEngagement?.description}</DialogDescription>
+            <DialogTitle className="text-xl">تفاصيل المهمة</DialogTitle>
+            <DialogDescription className="text-slate-400">
+              عرض البيانات كما توفرها الواجهة البرمجية المحدثة.
+            </DialogDescription>
           </DialogHeader>
+
           {selectedEngagement && (
-            <Tabs defaultValue="overview" className="mt-4">
-              <TabsList className="bg-slate-800 border border-slate-700">
-                <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
-                <TabsTrigger value="planning">التخطيط</TabsTrigger>
-                <TabsTrigger value="team">الفريق</TabsTrigger>
-              </TabsList>
-              <TabsContent value="overview" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <Card className="bg-slate-800 border-slate-700">
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-slate-400 mb-1">الحالة</p>
-                      <Badge className={getStatusColor(selectedEngagement.status)}>
-                        {getStatusLabel(selectedEngagement.status)}
-                      </Badge>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-slate-800 border-slate-700">
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-slate-400 mb-1">الأولوية</p>
-                      <Badge
-                        variant={getPriorityColor(selectedEngagement.priority ?? "medium")}
-                        className={
-                          selectedEngagement.priority === "high"
-                            ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
-                            : selectedEngagement.priority === "medium"
-                              ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/30"
-                              : ""
-                        }
-                      >
-                        {getPriorityLabel(selectedEngagement.priority ?? "medium")}
-                      </Badge>
-                    </CardContent>
-                  </Card>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <p className="text-sm text-slate-400">عنوان المهمة</p>
+                <p className="text-lg font-semibold text-white">{selectedEngagement.title}</p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-slate-400">النطاق</p>
+                <p className="whitespace-pre-line text-slate-200">{selectedEngagement.scope}</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
+                <div className="space-y-1">
+                  <p className="text-slate-500 text-xs">الحالة</p>
+                  <Badge variant="outline" className={statusColors[selectedEngagement.status]}>
+                    {statusLabels[selectedEngagement.status]}
+                  </Badge>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-slate-400">التقدم</p>
-                  <Progress value={selectedEngagement.progress ?? 0} className="h-3" />
-                  <p className="text-right text-sm text-white font-medium">{selectedEngagement.progress ?? 0}%</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">الساعات المستخدمة</p>
-                    <p className="text-xl font-semibold text-white">
-                      {selectedEngagement.actualHours ?? 0} / {selectedEngagement.estimatedHours ?? 0}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">مستوى المخاطر</p>
-                    <Badge
-                      variant={selectedEngagement.riskLevel === "high" ? "destructive" : "secondary"}
-                      className={
-                        selectedEngagement.riskLevel === "medium"
-                          ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
-                          : selectedEngagement.riskLevel === "low"
-                            ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                            : ""
-                      }
-                    >
-                      {selectedEngagement.riskLevel === "high"
-                        ? "عالي"
-                        : selectedEngagement.riskLevel === "medium"
-                          ? "متوسط"
-                          : "منخفض"}
-                    </Badge>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="planning" className="space-y-4 mt-4">
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-2">الأهداف</h4>
-                  <ul className="space-y-2">
-                    {(selectedEngagement.objectives ?? []).map((obj, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-slate-300">
-                        <Target className="h-4 w-4 text-indigo-400 mt-1 flex-shrink-0" />
-                        <span>{obj}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <div className="space-y-1">
+                  <p className="text-slate-500 text-xs">التصنيف</p>
+                  <Badge variant="outline" className={riskColors[selectedEngagement.riskRating] ?? riskColors.medium}>
+                    {riskLabels[selectedEngagement.riskRating] ?? riskLabels.medium}
+                  </Badge>
                 </div>
                 <div>
-                  <h4 className="text-lg font-semibold text-white mb-2">النطاق</h4>
-                  <p className="text-slate-300">{selectedEngagement.scope}</p>
+                  <p className="text-slate-500 text-xs">البداية</p>
+                  <p>{selectedEngagement.startDate ?? "غير محدد"}</p>
                 </div>
                 <div>
-                  <h4 className="text-lg font-semibold text-white mb-2">المعايير</h4>
-                  <p className="text-slate-300">{selectedEngagement.criteria}</p>
+                  <p className="text-slate-500 text-xs">النهاية</p>
+                  <p>{selectedEngagement.endDate ?? "غير محدد"}</p>
                 </div>
-              </TabsContent>
-              <TabsContent value="team" className="space-y-4 mt-4">
                 <div>
-                  <h4 className="text-lg font-semibold text-white mb-3">المدققون المعينون</h4>
-                  <div className="space-y-2">
-                    {(selectedEngagement.assignedAuditors ?? []).map((auditor, idx) => (
-                      <div key={idx} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg">
-                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
-                          {(auditor || "").charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-white font-medium">{auditor}</p>
-                          <p className="text-sm text-slate-400">مدقق داخلي</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <p className="text-slate-500 text-xs">تاريخ الإنشاء</p>
+                  <p>{selectedEngagement.createdAt}</p>
                 </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

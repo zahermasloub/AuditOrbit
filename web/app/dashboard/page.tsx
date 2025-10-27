@@ -57,30 +57,42 @@ export default function DashboardPage() {
     pending_reports: 0,
     completion_rate: 0
   })
+  const [statusDistribution, setStatusDistribution] = useState<{ name: string; value: number }[]>([])
+  const [severityDistribution, setSeverityDistribution] = useState<{ name: string; value: number }[]>([])
+  const [recentEngagements, setRecentEngagements] = useState<
+    Awaited<ReturnType<typeof dashboardApi.getRecentEngagements>>
+  >([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load dashboard stats from API
+  // Load dashboard data from API
   useEffect(() => {
-    async function loadStats() {
+    async function loadDashboard() {
       try {
         setIsLoading(true)
-        const data = await dashboardApi.getStats()
-        
+        const [statsData, statusData, findingsData, recentData] = await Promise.all([
+          dashboardApi.getStats(),
+          dashboardApi.getEngagementsByStatus(),
+          dashboardApi.getFindingsBySeverity(),
+          dashboardApi.getRecentEngagements(),
+        ])
+
         setStats({
-          active_engagements: data.active_engagements || 0,
-          open_findings: data.open_findings || 0,
-          pending_reports: data.pending_reports || 0,
-          completion_rate: data.completion_rate || 0
+          active_engagements: statsData.active_engagements || 0,
+          open_findings: statsData.open_findings || 0,
+          pending_reports: statsData.pending_reports || 0,
+          completion_rate: statsData.completion_rate || 0
         })
+        setStatusDistribution(statusData ?? [])
+        setSeverityDistribution(findingsData ?? [])
+        setRecentEngagements(recentData ?? [])
       } catch (error) {
-        console.error("Failed to load stats:", error)
-        // Keep default values on error
+        console.error("Failed to load dashboard data:", error)
       } finally {
         setIsLoading(false)
       }
     }
     
-    loadStats()
+    loadDashboard()
   }, [])
 
   const menuItems = [
@@ -131,50 +143,31 @@ export default function DashboardPage() {
     },
   ]
 
-  const recentEngagements = [
-    {
-      id: 1,
-      title: "تدقيق نظام المشتريات",
-      department: "المشتريات",
-      status: "جاري التنفيذ",
-      progress: 65,
-      dueDate: "2025-02-15",
-      priority: "عالي",
-    },
-    {
-      id: 2,
-      title: "مراجعة الضوابط المالية",
-      department: "المالية",
-      status: "التخطيط",
-      progress: 30,
-      dueDate: "2025-03-01",
-      priority: "متوسط",
-    },
-    {
-      id: 3,
-      title: "تدقيق أمن المعلومات",
-      department: "تقنية المعلومات",
-      status: "إعداد التقرير",
-      progress: 90,
-      dueDate: "2025-01-30",
-      priority: "حرج",
-    },
-  ]
+  const engagementsByStatus =
+    statusDistribution.length > 0
+      ? statusDistribution.map((item, idx) => ({
+          ...item,
+          color: ['#06B6D4', '#4F46E5', '#F59E0B', '#10B981', '#6366F1'][idx % 5],
+        }))
+      : [
+          { name: "???????", value: 0, color: "#06B6D4" },
+          { name: "???? ???????", value: 0, color: "#4F46E5" },
+          { name: "????? ???????", value: 0, color: "#F59E0B" },
+          { name: "?????", value: 0, color: "#10B981" },
+        ]
 
-  const engagementsByStatus = [
-    { name: "التخطيط", value: 8, color: "#06B6D4" },
-    { name: "جاري التنفيذ", value: 12, color: "#4F46E5" },
-    { name: "إعداد التقرير", value: 5, color: "#F59E0B" },
-    { name: "مكتمل", value: 23, color: "#10B981" },
-  ]
-
-  const findingsBySeverity = [
-    { name: "حرج", value: 5, color: "#EF4444" },
-    { name: "عالي", value: 12, color: "#F97316" },
-    { name: "متوسط", value: 18, color: "#F59E0B" },
-    { name: "منخفض", value: 8, color: "#10B981" },
-  ]
-
+  const findingsBySeverity =
+    severityDistribution.length > 0
+      ? severityDistribution.map((item, idx) => ({
+          ...item,
+          color: ['#EF4444', '#F97316', '#F59E0B', '#10B981'][idx % 4],
+        }))
+      : [
+          { name: "???", value: 0, color: "#EF4444" },
+          { name: "????", value: 0, color: "#F97316" },
+          { name: "?????", value: 0, color: "#F59E0B" },
+          { name: "?????", value: 0, color: "#10B981" },
+        ]
   const monthlyProgress = [
     { month: "يناير", completed: 4, planned: 6 },
     { month: "فبراير", completed: 5, planned: 7 },
@@ -192,6 +185,29 @@ export default function DashboardPage() {
     { department: "العمليات", score: 76 },
   ]
 
+
+  const normalizedRecentEngagements =
+    recentEngagements.length > 0
+      ? normalizedRecentEngagements.map((item) => ({
+          id: item.id,
+          title: item.title,
+          department: item.department ?? "غير محدد",
+          status: item.status ?? "غير محدد",
+          progress: item.progress ?? 0,
+          dueDate: item.end_date ?? "غير محدد",
+          priority: item.priority ?? "متوسط",
+        }))
+      : [
+          {
+            id: "placeholder-1",
+            title: "لا توجد بيانات متاحة",
+            department: "—",
+            status: "غير محدد",
+            progress: 0,
+            dueDate: "—",
+            priority: "متوسط",
+          },
+        ]
   return (
     <div className="min-h-screen bg-slate-950 flex" dir="rtl">
       {/* Sidebar */}
@@ -450,7 +466,7 @@ export default function DashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentEngagements.map((engagement) => (
+                    {normalizedRecentEngagements.map((engagement) => (
                       <div
                         key={engagement.id}
                         className="p-4 bg-slate-800/50 border border-slate-700 rounded-lg hover:border-indigo-500/50 transition-colors cursor-pointer"
