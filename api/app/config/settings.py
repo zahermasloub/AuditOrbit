@@ -12,6 +12,10 @@ class Settings(BaseSettings):
   REDIS_URL: str = "redis://localhost:6379/0"
   S3_ENDPOINT: str = "http://localhost:9000"
   S3_BUCKET: str = "auditevidence"
+  
+  # Add fields used in .env to avoid validation errors
+  WEB_ORIGIN: str = "http://localhost:3000"
+  WEB_ORIGINS: str = "http://localhost:3000"
 
 
 settings = Settings()

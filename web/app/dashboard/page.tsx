@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   LayoutDashboard,
   FileText,
@@ -46,10 +46,43 @@ import { EvidenceSection } from "@/components/evidence-section"
 import { FindingsSection } from "@/components/findings-section"
 import { ReportsSection } from "@/components/reports-section"
 import { FollowUpSection } from "@/components/followup-section"
+import { apiClient, TokenManager } from "@/lib/api-client"
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeSection, setActiveSection] = useState("dashboard")
+  const [stats, setStats] = useState({
+    active_engagements: 0,
+    open_findings: 0,
+    pending_reports: 0,
+    completion_rate: 0
+  })
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Load dashboard stats from API
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        setIsLoading(true)
+        const response = await apiClient.GET("/dashboard/stats")
+        
+        if (response.data) {
+          setStats({
+            active_engagements: response.data.active_engagements || 0,
+            open_findings: response.data.open_findings || 0,
+            pending_reports: response.data.pending_reports || 0,
+            completion_rate: response.data.completion_rate || 0
+          })
+        }
+      } catch (error) {
+        console.error("Failed to load stats:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadStats()
+  }, [])
 
   const menuItems = [
     { id: "dashboard", label: "لوحة المعلومات", icon: LayoutDashboard },
