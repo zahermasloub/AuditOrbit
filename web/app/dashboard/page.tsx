@@ -64,14 +64,15 @@ export default function DashboardPage() {
     async function loadStats() {
       try {
         setIsLoading(true)
-        const response = await apiClient.GET("/dashboard/stats")
+        const response = await apiClient.GET("/dashboard/stats", {})
         
         if (response.data) {
+          const data = response.data as any
           setStats({
-            active_engagements: response.data.active_engagements || 0,
-            open_findings: response.data.open_findings || 0,
-            pending_reports: response.data.pending_reports || 0,
-            completion_rate: response.data.completion_rate || 0
+            active_engagements: data.active_engagements || 0,
+            open_findings: data.open_findings || 0,
+            pending_reports: data.pending_reports || 0,
+            completion_rate: data.completion_rate || 0
           })
         }
       } catch (error) {
