@@ -61,8 +61,15 @@ async def sqlalchemy_exception_handler(request: Request, exc: SQLAlchemyError):
 
 async def general_exception_handler(request: Request, exc: Exception):
     """معالج عام لجميع الأخطاء"""
-    logger.error(f"Unhandled exception: {str(exc)}")
-    logger.error(traceback.format_exc())
+    error_details = str(exc)
+    stack_trace = traceback.format_exc()
+    
+    logger.error(f"Unhandled exception: {error_details}")
+    logger.error(stack_trace)
+    
+    # Print to console for debugging
+    print(f"❌ ERROR: {type(exc).__name__}: {error_details}")
+    print(f"❌ STACK TRACE:\n{stack_trace}")
     
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -71,7 +78,7 @@ async def general_exception_handler(request: Request, exc: Exception):
             "error": {
                 "code": ErrorCodes.INTERNAL_ERROR,
                 "message": "حدث خطأ داخلي في الخادم",
-                "details": {"error": str(exc) if logger.level == logging.DEBUG else None}
+                "details": {"error": error_details}  # Always show for debugging
             },
             "timestamp": datetime.utcnow().isoformat()
         }

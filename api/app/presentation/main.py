@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from ..middlewares.audit import audit_log_middleware
+# from ..middlewares.audit import audit_log_middleware  # Temporarily disabled
 from .middlewares.rate_limit import limiter
 from .middlewares.security import SecurityHeadersMiddleware
 from ..infrastructure.exception_handlers import setup_exception_handlers
@@ -30,11 +30,27 @@ from .routers import (
   wp,
 )
 
-app = FastAPI(title="AuditOrbit API", version="0.2.0", docs_url="/docs", redoc_url="/redoc")
+app = FastAPI(title="AuditOrbit API", version="0.2.0", docs_url="/docs", redoc_url="/redoc", debug=True)
 app.state.limiter = limiter
-app.add_middleware(SlowAPIMiddleware)
-app.add_middleware(SecurityHeadersMiddleware)
-app.middleware("http")(audit_log_middleware)
+
+# Debug middleware - FIRST to catch all requests
+@app.middleware("http")
+async def debug_middleware(request: Request, call_next):
+  print(f"🔵 Incoming Request: {request.method} {request.url.path}")
+  print(f"   Headers: {dict(request.headers)}")
+  try:
+    response = await call_next(request)
+    print(f"🟢 Response Status: {response.status_code}")
+    return response
+  except Exception as e:
+    print(f"🔴 EXCEPTION in middleware chain: {type(e).__name__}: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    raise
+
+# app.add_middleware(SlowAPIMiddleware)  # DISABLED FOR DEBUG
+# app.add_middleware(SecurityHeadersMiddleware)  # DISABLED FOR DEBUG
+# app.middleware("http")(audit_log_middleware)  # DISABLED TEMPORARILY FOR LOGIN FIX
 
 # إعداد معالجات الأخطاء الموحدة
 setup_exception_handlers(app)

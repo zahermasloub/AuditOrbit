@@ -46,7 +46,7 @@ import { EvidenceSection } from "@/components/evidence-section"
 import { FindingsSection } from "@/components/findings-section"
 import { ReportsSection } from "@/components/reports-section"
 import { FollowUpSection } from "@/components/followup-section"
-import { apiClient, TokenManager } from "@/lib/api-client"
+import { dashboardApi } from "@/lib/api"
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -64,19 +64,17 @@ export default function DashboardPage() {
     async function loadStats() {
       try {
         setIsLoading(true)
-        const response = await apiClient.GET("/dashboard/stats", {})
+        const data = await dashboardApi.getStats()
         
-        if (response.data) {
-          const data = response.data as any
-          setStats({
-            active_engagements: data.active_engagements || 0,
-            open_findings: data.open_findings || 0,
-            pending_reports: data.pending_reports || 0,
-            completion_rate: data.completion_rate || 0
-          })
-        }
+        setStats({
+          active_engagements: data.active_engagements || 0,
+          open_findings: data.open_findings || 0,
+          pending_reports: data.pending_reports || 0,
+          completion_rate: data.completion_rate || 0
+        })
       } catch (error) {
         console.error("Failed to load stats:", error)
+        // Keep default values on error
       } finally {
         setIsLoading(false)
       }
@@ -101,7 +99,7 @@ export default function DashboardPage() {
   const statsCards = [
     {
       title: "المهام النشطة",
-      value: "12",
+      value: isLoading ? "..." : String(stats.active_engagements),
       change: "+3",
       trend: "up",
       icon: Target,
@@ -109,7 +107,7 @@ export default function DashboardPage() {
     },
     {
       title: "النتائج المفتوحة",
-      value: "28",
+      value: isLoading ? "..." : String(stats.open_findings),
       change: "-5",
       trend: "down",
       icon: AlertCircle,
@@ -117,7 +115,7 @@ export default function DashboardPage() {
     },
     {
       title: "التقارير المعلقة",
-      value: "5",
+      value: isLoading ? "..." : String(stats.pending_reports),
       change: "+2",
       trend: "up",
       icon: FileText,
@@ -125,7 +123,7 @@ export default function DashboardPage() {
     },
     {
       title: "معدل الإنجاز",
-      value: "87%",
+      value: isLoading ? "..." : `${stats.completion_rate}%`,
       change: "+12%",
       trend: "up",
       icon: PieChart,
@@ -300,7 +298,7 @@ export default function DashboardPage() {
             <div className="space-y-6">
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {statsCards.map((stat, idx) => (
+                {statsCards.map((stat: any, idx: number) => (
                   <Card key={idx} className="bg-slate-900 border-slate-800">
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between mb-4">
@@ -345,7 +343,7 @@ export default function DashboardPage() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          label={({ name, percent }: any) => `${name} ${(percent * 100).toFixed(0)}%`}
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
