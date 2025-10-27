@@ -98,7 +98,7 @@ export default function DashboardPage() {
     { id: "settings", label: "الإعدادات", icon: Settings },
   ]
 
-  const stats = [
+  const statsCards = [
     {
       title: "المهام النشطة",
       value: "12",
@@ -300,7 +300,7 @@ export default function DashboardPage() {
             <div className="space-y-6">
               {/* Stats Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {stats.map((stat, idx) => (
+                {statsCards.map((stat, idx) => (
                   <Card key={idx} className="bg-slate-900 border-slate-800">
                     <CardContent className="pt-6">
                       <div className="flex items-start justify-between mb-4">
