@@ -12,6 +12,7 @@ interface ApiError {
     details?: Record<string, unknown>
   }
   timestamp: string
+  detail?: string  // FastAPI unauthorized response
 }
 
 export class ApiClient {
@@ -54,7 +55,23 @@ export class ApiClient {
 
     if (!response.ok) {
       const error = data as ApiError
-      throw new Error(error.error?.message || 'Request failed')
+      console.error('API Error:', {
+        url,
+        status: response.status,
+        error: data
+      })
+      
+      // Handle unauthorized
+      if (response.status === 401) {
+        // Redirect to login if not authenticated
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          console.warn('Unauthorized - redirecting to login')
+          window.location.href = '/login'
+        }
+        throw new Error('Unauthorized - please login')
+      }
+      
+      throw new Error(error.error?.message || error.detail || 'Request failed')
     }
 
     return { data, status: response.status }
