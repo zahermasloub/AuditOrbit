@@ -1,3 +1,6 @@
 export * from './client'
 export * from './dashboard'
 export * from './engagements'
+export * from './findings'
+export * from './reports'
+export * from './evidence'

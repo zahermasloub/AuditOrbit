@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Plus,
   FileText,
@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   Clock,
   Building2,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -25,133 +26,145 @@ import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useEngagements } from "@/lib/hooks/useEngagements"
+import { Engagement as ApiEngagement } from "@/lib/api"
+
+// Map API status to display status
+const statusMap: Record<string, "planning" | "fieldwork" | "reporting" | "follow-up" | "completed"> = {
+  planned: "planning",
+  in_progress: "fieldwork",
+  review: "reporting",
+  completed: "completed",
+  cancelled: "completed",
+}
+
+// Map API risk_rating to display riskLevel
+const riskMap: Record<string, "high" | "medium" | "low"> = {
+  high: "high",
+  medium: "medium",
+  low: "low",
+}
 
 interface Engagement {
-  id: number
+  id: string
   title: string
-  description: string
-  department: string
+  description?: string
+  department?: string
   status: "planning" | "fieldwork" | "reporting" | "follow-up" | "completed"
-  priority: "critical" | "high" | "medium" | "low"
-  progress: number
-  startDate: string
-  endDate: string
-  assignedAuditors: string[]
-  objectives: string[]
+  priority?: "critical" | "high" | "medium" | "low"
+  progress?: number
+  startDate?: string
+  endDate?: string
+  assignedAuditors?: string[]
+  objectives?: string[]
   scope: string
-  criteria: string
-  estimatedHours: number
-  actualHours: number
+  criteria?: string
+  estimatedHours?: number
+  actualHours?: number
   riskLevel: "high" | "medium" | "low"
 }
 
-export function EngagementsSection() {
-  const [engagements, setEngagements] = useState<Engagement[]>([
-    {
-      id: 1,
-      title: "تدقيق نظام المشتريات",
-      description: "مراجعة شاملة لعمليات المشتريات والضوابط الداخلية",
-      department: "المشتريات",
-      status: "fieldwork",
-      priority: "high",
-      progress: 65,
-      startDate: "2025-01-15",
-      endDate: "2025-02-15",
-      assignedAuditors: ["أحمد محمد", "سارة علي"],
-      objectives: ["تقييم فعالية ضوابط المشتريات", "التحقق من الامتثال للسياسات", "تقييم كفاءة العمليات"],
-      scope: "جميع عمليات المشتريات للربع الأخير من 2024",
-      criteria: "سياسات المشتريات الداخلية، معايير ISO 9001",
-      estimatedHours: 120,
-      actualHours: 78,
-      riskLevel: "high",
-    },
-    {
-      id: 2,
-      title: "مراجعة الضوابط المالية",
-      description: "تدقيق الضوابط المالية والمحاسبية",
-      department: "المالية",
-      status: "planning",
-      priority: "medium",
-      progress: 30,
-      startDate: "2025-02-01",
-      endDate: "2025-03-01",
-      assignedAuditors: ["محمد خالد"],
-      objectives: ["تقييم الضوابط المالية", "مراجعة التقارير المالية"],
-      scope: "العمليات المالية للسنة المالية 2024",
-      criteria: "المعايير المحاسبية الدولية، السياسات المالية الداخلية",
-      estimatedHours: 100,
-      actualHours: 30,
-      riskLevel: "high",
-    },
-    {
-      id: 3,
-      title: "تدقيق أمن المعلومات",
-      description: "تقييم أمن البنية التحتية لتقنية المعلومات",
-      department: "تقنية المعلومات",
-      status: "reporting",
-      priority: "critical",
-      progress: 90,
-      startDate: "2025-01-01",
-      endDate: "2025-01-30",
-      assignedAuditors: ["فاطمة حسن", "عمر يوسف"],
-      objectives: ["تقييم الضوابط الأمنية", "اختبار الاختراق", "مراجعة السياسات"],
-      scope: "جميع أنظمة تقنية المعلومات والشبكات",
-      criteria: "ISO 27001، NIST Cybersecurity Framework",
-      estimatedHours: 150,
-      actualHours: 135,
-      riskLevel: "high",
-    },
-  ])
+interface EngagementForm {
+  title: string
+  scope: string
+  risk_rating: "high" | "medium" | "low"
+  annual_plan_year: number
+  description?: string
+  department?: string
+  priority?: "critical" | "high" | "medium" | "low"
+  startDate?: string
+  endDate?: string
+  estimatedHours?: number | string
+  objectives?: string
+  criteria?: string
+}
 
+function mapApiToLocal(apiEngagement: ApiEngagement): Engagement {
+  return {
+    id: apiEngagement.id,
+    title: apiEngagement.title,
+    scope: apiEngagement.scope ?? "",
+    status: statusMap[apiEngagement.status] || "planning",
+    riskLevel: riskMap[apiEngagement.risk_rating] || "medium",
+    startDate: apiEngagement.start_date || undefined,
+    endDate: apiEngagement.end_date || undefined,
+    description: apiEngagement.description ?? "",
+    department: apiEngagement.department ?? "",
+    priority: (apiEngagement.priority as any) ?? "medium",
+    progress: apiEngagement.progress ?? 0,
+    assignedAuditors: apiEngagement.assigned_auditors ?? [],
+    objectives: apiEngagement.objectives ?? [],
+    estimatedHours: apiEngagement.estimated_hours ?? 0,
+    actualHours: apiEngagement.actual_hours ?? 0,
+  }
+}
+
+export function EngagementsSection() {
+  const { 
+    engagements: apiEngagements, 
+    loading, 
+    error,
+    createEngagement: createApiEngagement,
+    deleteEngagement: deleteApiEngagement,
+    refresh 
+  } = useEngagements({ page: 1, size: 20 })
+
+  const [engagements, setEngagements] = useState<Engagement[]>([])
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
   const [selectedEngagement, setSelectedEngagement] = useState<Engagement | null>(null)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<EngagementForm>({
     title: "",
+    scope: "",
+    risk_rating: "medium",
+    annual_plan_year: new Date().getFullYear(),
     description: "",
     department: "",
     priority: "medium",
     startDate: "",
     endDate: "",
-    estimatedHours: "",
+    estimatedHours: 0,
     objectives: "",
-    scope: "",
     criteria: "",
   })
 
-  const handleCreateEngagement = () => {
-    const newEngagement: Engagement = {
-      id: engagements.length + 1,
-      title: formData.title,
-      description: formData.description,
-      department: formData.department,
-      status: "planning",
-      priority: formData.priority as "critical" | "high" | "medium" | "low",
-      progress: 0,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      assignedAuditors: [],
-      objectives: formData.objectives.split("\n").filter((o) => o.trim()),
-      scope: formData.scope,
-      criteria: formData.criteria,
-      estimatedHours: Number.parseInt(formData.estimatedHours),
-      actualHours: 0,
-      riskLevel: "medium",
+  // Map API engagements to local format
+  useEffect(() => {
+    if (apiEngagements) {
+      setEngagements(apiEngagements.map(mapApiToLocal))
     }
-    setEngagements([newEngagement, ...engagements])
-    setShowCreateDialog(false)
-    setFormData({
-      title: "",
-      description: "",
-      department: "",
-      priority: "medium",
-      startDate: "",
-      endDate: "",
-      estimatedHours: "",
-      objectives: "",
-      scope: "",
-      criteria: "",
-    })
+  }, [apiEngagements])
+
+  const handleCreateEngagement = async () => {
+    try {
+      await createApiEngagement({
+        title: formData.title,
+        scope: formData.scope,
+        risk_rating: formData.risk_rating,
+        annual_plan_year: formData.annual_plan_year,
+      })
+      setShowCreateDialog(false)
+      setFormData({
+        title: "",
+        scope: "",
+        risk_rating: "medium",
+        annual_plan_year: new Date().getFullYear(),
+      })
+    } catch (err) {
+      console.error("Failed to create engagement:", err)
+      alert("فشل في إنشاء المهمة التدقيقية")
+    }
+  }
+
+  const handleDeleteEngagement = async (id: string) => {
+    if (confirm("هل أنت متأكد من حذف هذه المهمة التدقيقية؟")) {
+      try {
+        await deleteApiEngagement(id)
+      } catch (err) {
+        console.error("Failed to delete engagement:", err)
+        alert("فشل في حذف المهمة التدقيقية")
+      }
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -316,7 +329,7 @@ export function EngagementsSection() {
                     <h4 className="text-xl font-semibold text-white">{engagement.title}</h4>
                     <Badge className={getStatusColor(engagement.status)}>{getStatusLabel(engagement.status)}</Badge>
                     <Badge
-                      variant={getPriorityColor(engagement.priority)}
+                      variant={getPriorityColor(engagement.priority ?? "medium")}
                       className={
                         engagement.priority === "high"
                           ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
@@ -325,7 +338,7 @@ export function EngagementsSection() {
                             : ""
                       }
                     >
-                      {getPriorityLabel(engagement.priority)}
+                      {getPriorityLabel(engagement.priority ?? "medium")}
                     </Badge>
                   </div>
                   <p className="text-slate-400 text-sm mb-3">{engagement.description}</p>
@@ -336,7 +349,7 @@ export function EngagementsSection() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      <span>{engagement.assignedAuditors.length} مدقق</span>
+                      <span>{engagement.assignedAuditors?.length ?? 0} مدقق</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
@@ -361,7 +374,12 @@ export function EngagementsSection() {
                   <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-slate-400 hover:text-red-400"
+                    onClick={() => handleDeleteEngagement(engagement.id)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -371,7 +389,7 @@ export function EngagementsSection() {
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">الساعات</p>
                   <p className="text-lg font-semibold text-white">
-                    {engagement.actualHours} / {engagement.estimatedHours}
+                    {engagement.actualHours ?? 0} / {engagement.estimatedHours ?? 0}
                   </p>
                 </div>
                 <div className="p-3 bg-slate-800/50 rounded-lg">
@@ -391,16 +409,16 @@ export function EngagementsSection() {
                 </div>
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">الأهداف</p>
-                  <p className="text-lg font-semibold text-white">{engagement.objectives.length}</p>
+                  <p className="text-lg font-semibold text-white">{engagement.objectives?.length ?? 0}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400">التقدم</span>
-                  <span className="text-white font-medium">{engagement.progress}%</span>
+                  <span className="text-white font-medium">{engagement.progress ?? 0}%</span>
                 </div>
-                <Progress value={engagement.progress} className="h-2" />
+                <Progress value={engagement.progress ?? 0} className="h-2" />
               </div>
             </CardContent>
           </Card>
@@ -468,7 +486,7 @@ export function EngagementsSection() {
                 </Label>
                 <Select
                   value={formData.priority}
-                  onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                  onValueChange={(value) => setFormData({ ...formData, priority: value as EngagementForm['priority'] })}
                 >
                   <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                     <SelectValue placeholder="اختر الأولوية" />
@@ -604,7 +622,7 @@ export function EngagementsSection() {
                     <CardContent className="pt-4">
                       <p className="text-sm text-slate-400 mb-1">الأولوية</p>
                       <Badge
-                        variant={getPriorityColor(selectedEngagement.priority)}
+                        variant={getPriorityColor(selectedEngagement.priority ?? "medium")}
                         className={
                           selectedEngagement.priority === "high"
                             ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
@@ -613,21 +631,21 @@ export function EngagementsSection() {
                               : ""
                         }
                       >
-                        {getPriorityLabel(selectedEngagement.priority)}
+                        {getPriorityLabel(selectedEngagement.priority ?? "medium")}
                       </Badge>
                     </CardContent>
                   </Card>
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-slate-400">التقدم</p>
-                  <Progress value={selectedEngagement.progress} className="h-3" />
-                  <p className="text-right text-sm text-white font-medium">{selectedEngagement.progress}%</p>
+                  <Progress value={selectedEngagement.progress ?? 0} className="h-3" />
+                  <p className="text-right text-sm text-white font-medium">{selectedEngagement.progress ?? 0}%</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-slate-400 mb-1">الساعات المستخدمة</p>
                     <p className="text-xl font-semibold text-white">
-                      {selectedEngagement.actualHours} / {selectedEngagement.estimatedHours}
+                      {selectedEngagement.actualHours ?? 0} / {selectedEngagement.estimatedHours ?? 0}
                     </p>
                   </div>
                   <div>
@@ -655,7 +673,7 @@ export function EngagementsSection() {
                 <div>
                   <h4 className="text-lg font-semibold text-white mb-2">الأهداف</h4>
                   <ul className="space-y-2">
-                    {selectedEngagement.objectives.map((obj, idx) => (
+                    {(selectedEngagement.objectives ?? []).map((obj, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-slate-300">
                         <Target className="h-4 w-4 text-indigo-400 mt-1 flex-shrink-0" />
                         <span>{obj}</span>
@@ -676,10 +694,10 @@ export function EngagementsSection() {
                 <div>
                   <h4 className="text-lg font-semibold text-white mb-3">المدققون المعينون</h4>
                   <div className="space-y-2">
-                    {selectedEngagement.assignedAuditors.map((auditor, idx) => (
+                    {(selectedEngagement.assignedAuditors ?? []).map((auditor, idx) => (
                       <div key={idx} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg">
                         <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
-                          {auditor.charAt(0)}
+                          {(auditor || "").charAt(0)}
                         </div>
                         <div>
                           <p className="text-white font-medium">{auditor}</p>
