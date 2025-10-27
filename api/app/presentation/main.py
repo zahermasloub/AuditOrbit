@@ -9,6 +9,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from ..middlewares.audit import audit_log_middleware
 from .middlewares.rate_limit import limiter
 from .middlewares.security import SecurityHeadersMiddleware
+from ..infrastructure.exception_handlers import setup_exception_handlers
 from .routers import (
   ai,
   audit,
@@ -33,6 +34,9 @@ app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.middleware("http")(audit_log_middleware)
+
+# إعداد معالجات الأخطاء الموحدة
+setup_exception_handlers(app)
 
 origins = [
   origin.strip()
