@@ -206,8 +206,17 @@ def get_recent_engagements(
         e.status::text as status,
         to_char(e."startDate", 'YYYY-MM-DD') as start_date,
         to_char(e."endDate", 'YYYY-MM-DD') as end_date,
-        'medium' as risk_rating,
-        50 as progress
+        COALESCE(e.risk_rating, 'medium') as risk_rating,
+        CASE e.status
+          WHEN 'DRAFT' THEN 5
+          WHEN 'PLANNING' THEN 20
+          WHEN 'IN_PROGRESS' THEN 50
+          WHEN 'FIELDWORK' THEN 70
+          WHEN 'REPORTING' THEN 85
+          WHEN 'REVIEW' THEN 95
+          WHEN 'COMPLETED' THEN 100
+          ELSE 10
+        END as progress
       FROM engagements e
       WHERE e.status != 'COMPLETED'
       ORDER BY e."createdAt" DESC

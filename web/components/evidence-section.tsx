@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Upload,
   FileText,
@@ -20,9 +20,11 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useEvidence } from "@/lib/hooks/useEvidence"
+import type { Evidence as ApiEvidence } from "@/lib/api"
 
-interface Evidence {
-  id: number
+interface EvidenceItem {
+  id: string
   title: string
   description: string
   fileName: string
@@ -43,103 +45,154 @@ interface Evidence {
   status: "pending" | "processing" | "processed" | "verified"
 }
 
+const SAMPLE_EVIDENCE: EvidenceItem[] = [
+  {
+    id: "1",
+    title: "????? ????????? 2024",
+    description: "????? ????? ????????? ????????",
+    fileName: "procurement-policy-2024.pdf",
+    fileType: "PDF",
+    fileSize: "2.4 MB",
+    uploadedBy: "???? ????",
+    uploadedDate: "2025-01-15",
+    engagementId: 1,
+    engagementTitle: "????? ???? ?????????",
+    checklistItemId: 1,
+    aiProcessed: true,
+    aiExtractedData: {
+      documentType: "?????",
+      keyFields: [
+        { label: "??? ???????", value: "POL-2024-001" },
+        { label: "????? ????????", value: "2024-01-10" },
+        { label: "??????? ??", value: "?????? ????????" },
+        { label: "????? ????????", value: "2025-01-10" },
+      ],
+      confidence: 95,
+    },
+    tags: ["?????", "???????", "?????"],
+    status: "verified",
+  },
+  {
+    id: "2",
+    title: "?????? ?????????",
+    description: "?????? ??????? ???????? ??? ?????????",
+    fileName: "approval-matrix.xlsx",
+    fileType: "Excel",
+    fileSize: "156 KB",
+    uploadedBy: "???? ????",
+    uploadedDate: "2025-01-16",
+    engagementId: 1,
+    engagementTitle: "????? ???? ?????????",
+    checklistItemId: 2,
+    aiProcessed: true,
+    aiExtractedData: {
+      documentType: "???? ??????",
+      keyFields: [
+        { label: "??? ?????????", value: "5" },
+        { label: "???? ??????", value: "1,000,000 ????" },
+        { label: "??? ?????????", value: "12" },
+      ],
+      confidence: 88,
+    },
+    tags: ["???????", "???????", "???????"],
+    status: "verified",
+  },
+  {
+    id: "3",
+    title: "???? ????? ??????",
+    description: "30 ??? ???? ????????",
+    fileName: "purchase-orders-sample.pdf",
+    fileType: "PDF",
+    fileSize: "8.7 MB",
+    uploadedBy: "???? ???",
+    uploadedDate: "2025-01-20",
+    engagementId: 1,
+    engagementTitle: "????? ???? ?????????",
+    aiProcessed: true,
+    aiExtractedData: {
+      documentType: "????? ????",
+      keyFields: [
+        { label: "??? ???????", value: "30" },
+        { label: "?????? ??????", value: "2,450,000 ????" },
+        { label: "??????", value: "Q4 2024" },
+      ],
+      confidence: 92,
+    },
+    tags: ["????? ????", "????", "??????"],
+    status: "processed",
+  },
+  {
+    id: "4",
+    title: "?????? ???? - ???? ABC",
+    description: "?????? ???? ????? ??????",
+    fileName: "invoice-abc-2024-1234.pdf",
+    fileType: "PDF",
+    fileSize: "345 KB",
+    uploadedBy: "???? ???",
+    uploadedDate: "2025-01-22",
+    engagementId: 1,
+    engagementTitle: "????? ???? ?????????",
+    aiProcessed: false,
+    tags: ["??????", "????"],
+    status: "processing",
+  },
+];
+
+const formatFileSize = (size?: number | null): string => {
+  if (!size || size <= 0) return "-";
+  const units = ["B", "KB", "MB", "GB"];
+  let index = 0;
+  let value = size;
+  while (value >= 1024 && index < units.length - 1) {
+    value /= 1024;
+    index += 1;
+  }
+  return `${value.toFixed(1)} ${units[index]}`;
+};
+
+const mapApiEvidence = (item: ApiEvidence): EvidenceItem => ({
+  id: item.id,
+  title: item.filename ?? "???? ?????",
+  description: item.status ?? "",
+  fileName: item.filename ?? "",
+  fileType: item.mime_type ?? "unknown",
+  fileSize: formatFileSize(item.size_bytes),
+  uploadedBy: item.uploader_id ?? "??? ????",
+  uploadedDate: item.created_at ?? "",
+  engagementId: parseInt(item.engagement_id, 10) || 0,
+  engagementTitle: item.engagement_id ?? "",
+  aiProcessed: item.status === "processed" || item.status === "verified",
+  tags: [],
+  status: item.status === "processed" || item.status === "verified" ? "verified" : "pending",
+});
+
 export function EvidenceSection() {
-  const [evidence, setEvidence] = useState<Evidence[]>([
-    {
-      id: 1,
-      title: "سياسة المشتريات 2024",
-      description: "وثيقة سياسة المشتريات المعتمدة",
-      fileName: "procurement-policy-2024.pdf",
-      fileType: "PDF",
-      fileSize: "2.4 MB",
-      uploadedBy: "أحمد محمد",
-      uploadedDate: "2025-01-15",
-      engagementId: 1,
-      engagementTitle: "تدقيق نظام المشتريات",
-      checklistItemId: 1,
-      aiProcessed: true,
-      aiExtractedData: {
-        documentType: "سياسة",
-        keyFields: [
-          { label: "رقم الوثيقة", value: "POL-2024-001" },
-          { label: "تاريخ الاعتماد", value: "2024-01-10" },
-          { label: "المعتمد من", value: "الرئيس التنفيذي" },
-          { label: "تاريخ المراجعة", value: "2025-01-10" },
-        ],
-        confidence: 95,
-      },
-      tags: ["سياسة", "مشتريات", "معتمد"],
-      status: "verified",
-    },
-    {
-      id: 2,
-      title: "مصفوفة الصلاحيات",
-      description: "مصفوفة صلاحيات الموافقة على المشتريات",
-      fileName: "approval-matrix.xlsx",
-      fileType: "Excel",
-      fileSize: "156 KB",
-      uploadedBy: "أحمد محمد",
-      uploadedDate: "2025-01-16",
-      engagementId: 1,
-      engagementTitle: "تدقيق نظام المشتريات",
-      checklistItemId: 2,
-      aiProcessed: true,
-      aiExtractedData: {
-        documentType: "جدول بيانات",
-        keyFields: [
-          { label: "عدد المستويات", value: "5" },
-          { label: "أعلى صلاحية", value: "1,000,000 ريال" },
-          { label: "عدد المعتمدين", value: "12" },
-        ],
-        confidence: 88,
-      },
-      tags: ["صلاحيات", "موافقات", "مشتريات"],
-      status: "verified",
-    },
-    {
-      id: 3,
-      title: "عينة طلبات الشراء",
-      description: "30 طلب شراء للاختبار",
-      fileName: "purchase-orders-sample.pdf",
-      fileType: "PDF",
-      fileSize: "8.7 MB",
-      uploadedBy: "سارة علي",
-      uploadedDate: "2025-01-20",
-      engagementId: 1,
-      engagementTitle: "تدقيق نظام المشتريات",
-      aiProcessed: true,
-      aiExtractedData: {
-        documentType: "طلبات شراء",
-        keyFields: [
-          { label: "عدد الطلبات", value: "30" },
-          { label: "إجمالي القيمة", value: "2,450,000 ريال" },
-          { label: "الفترة", value: "Q4 2024" },
-        ],
-        confidence: 92,
-      },
-      tags: ["طلبات شراء", "عينة", "اختبار"],
-      status: "processed",
-    },
-    {
-      id: 4,
-      title: "فاتورة مورد - شركة ABC",
-      description: "فاتورة شراء معدات مكتبية",
-      fileName: "invoice-abc-2024-1234.pdf",
-      fileType: "PDF",
-      fileSize: "345 KB",
-      uploadedBy: "سارة علي",
-      uploadedDate: "2025-01-22",
-      engagementId: 1,
-      engagementTitle: "تدقيق نظام المشتريات",
-      aiProcessed: false,
-      tags: ["فاتورة", "مورد"],
-      status: "processing",
-    },
-  ])
+  const [evidence, setEvidence] = useState<EvidenceItem[]>(SAMPLE_EVIDENCE);
+  const {
+    evidence: apiEvidence,
+    loading,
+    error,
+    uploadEvidence,
+    refresh,
+  } = useEvidence({ page: 1, size: 50 });
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (apiEvidence.length > 0) {
+      setEvidence(apiEvidence.map(mapApiEvidence));
+    } else {
+      setEvidence(SAMPLE_EVIDENCE);
+    }
+  }, [apiEvidence]);
+
+  const displayedEvidence = useMemo(() => evidence, [evidence]);
 
   const [showUploadDialog, setShowUploadDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
-  const [selectedEvidence, setSelectedEvidence] = useState<Evidence | null>(null)
+  const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
 
@@ -149,13 +202,14 @@ export function EvidenceSection() {
     setIsUploading(true)
     setUploadProgress(0)
 
-    // Simulate upload and AI processing
+    // Placeholder upload flow – integrate backend upload when endpoints are ready
     const interval = setInterval(() => {
       setUploadProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval)
           setIsUploading(false)
           setShowUploadDialog(false)
+          refresh()
           return 100
         }
         return prev + 10
@@ -223,12 +277,12 @@ export function EvidenceSection() {
   }
 
   const statusCounts = {
-    total: evidence.length,
-    pending: evidence.filter((e) => e.status === "pending").length,
-    processing: evidence.filter((e) => e.status === "processing").length,
-    processed: evidence.filter((e) => e.status === "processed").length,
-    verified: evidence.filter((e) => e.status === "verified").length,
-    aiProcessed: evidence.filter((e) => e.aiProcessed).length,
+    total: displayedEvidence.length,
+    pending: displayedEvidence.filter((e) => e.status === "pending").length,
+    processing: displayedEvidence.filter((e) => e.status === "processing").length,
+    processed: displayedEvidence.filter((e) => e.status === "processed").length,
+    verified: displayedEvidence.filter((e) => e.status === "verified").length,
+    aiProcessed: displayedEvidence.filter((e) => e.aiProcessed).length,
   }
 
   return (
@@ -247,6 +301,13 @@ export function EvidenceSection() {
           رفع أدلة
         </Button>
       </div>
+
+      {error && !loading && (
+        <div className="p-3 border border-rose-500/40 bg-rose-500/10 text-rose-200 rounded-lg text-sm">{error}</div>
+      )}
+      {loading && (
+        <div className="p-3 border border-indigo-500/40 bg-indigo-500/10 text-indigo-200 rounded-lg text-sm">يتم تحديث قائمة الأدلة...</div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
@@ -320,7 +381,7 @@ export function EvidenceSection() {
 
       {/* Evidence List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {evidence.map((item) => (
+        {displayedEvidence.map((item) => (
           <Card key={item.id} className="bg-slate-900 border-slate-800 hover:border-indigo-500/50 transition-colors">
             <CardContent className="pt-6">
               <div className="flex items-start gap-3 mb-4">
