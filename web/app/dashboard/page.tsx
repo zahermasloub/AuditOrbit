@@ -150,10 +150,10 @@ export default function DashboardPage() {
           color: ['#06B6D4', '#4F46E5', '#F59E0B', '#10B981', '#6366F1'][idx % 5],
         }))
       : [
-          { name: "???????", value: 0, color: "#06B6D4" },
-          { name: "???? ???????", value: 0, color: "#4F46E5" },
-          { name: "????? ???????", value: 0, color: "#F59E0B" },
-          { name: "?????", value: 0, color: "#10B981" },
+          { name: "مسودة", value: 2, color: "#06B6D4" },
+          { name: "جاري التنفيذ", value: 15, color: "#4F46E5" },
+          { name: "قيد المراجعة", value: 8, color: "#F59E0B" },
+          { name: "مكتمل", value: 23, color: "#10B981" },
         ]
 
   const findingsBySeverity =
@@ -163,10 +163,10 @@ export default function DashboardPage() {
           color: ['#EF4444', '#F97316', '#F59E0B', '#10B981'][idx % 4],
         }))
       : [
-          { name: "???", value: 0, color: "#EF4444" },
-          { name: "????", value: 0, color: "#F97316" },
-          { name: "?????", value: 0, color: "#F59E0B" },
-          { name: "?????", value: 0, color: "#10B981" },
+          { name: "حرج", value: 5, color: "#EF4444" },
+          { name: "عالي", value: 12, color: "#F97316" },
+          { name: "متوسط", value: 18, color: "#F59E0B" },
+          { name: "منخفض", value: 8, color: "#10B981" },
         ]
   const monthlyProgress = [
     { month: "يناير", completed: 4, planned: 6 },
@@ -185,10 +185,9 @@ export default function DashboardPage() {
     { department: "العمليات", score: 76 },
   ]
 
-
   const normalizedRecentEngagements =
     recentEngagements.length > 0
-      ? normalizedRecentEngagements.map((item) => ({
+      ? recentEngagements.map((item) => ({
           id: item.id,
           title: item.title,
           department: item.department ?? "غير محدد",
