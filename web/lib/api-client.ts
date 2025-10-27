@@ -1,20 +1,16 @@
 /**
- * عميل API موحد - Unified API Client
- * يتعامل مع جميع استدعاءات Backend
+ * عميل API موحد - للتواصل مع Backend
  */
 
 import createClient from 'openapi-fetch'
 import type { paths } from './types.gen'
 
-// تكوين عنوان Backend
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'
 
-// إنشاء العميل الآمن
 export const apiClient = createClient<paths>({
   baseUrl: BACKEND_URL,
 })
 
-// نوع الاستجابة الموحدة
 export interface ApiResponse<T> {
   success: boolean
   data?: T
@@ -29,41 +25,21 @@ export interface ApiResponse<T> {
     total_items: number
     total_pages: number
   }
-  count?: number
   message?: string
   timestamp: string
 }
 
-// أكواد الأخطاء
 export const ErrorCodes = {
-  // Authentication & Authorization
   UNAUTHORIZED: 'UNAUTHORIZED',
   FORBIDDEN: 'FORBIDDEN',
   TOKEN_EXPIRED: 'TOKEN_EXPIRED',
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
-  
-  // Validation
   VALIDATION_ERROR: 'VALIDATION_ERROR',
-  INVALID_INPUT: 'INVALID_INPUT',
-  MISSING_FIELD: 'MISSING_FIELD',
-  
-  // Resources
   NOT_FOUND: 'NOT_FOUND',
   ALREADY_EXISTS: 'ALREADY_EXISTS',
-  CONFLICT: 'CONFLICT',
-  
-  // Business Logic
-  OPERATION_FAILED: 'OPERATION_FAILED',
-  INSUFFICIENT_PERMISSIONS: 'INSUFFICIENT_PERMISSIONS',
-  INVALID_STATE: 'INVALID_STATE',
-  
-  // Server
   INTERNAL_ERROR: 'INTERNAL_ERROR',
-  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
-  DATABASE_ERROR: 'DATABASE_ERROR',
 } as const
 
-// معالج الأخطاء
 export class ApiError extends Error {
   code: string
   details?: any
@@ -78,7 +54,6 @@ export class ApiError extends Error {
   }
 }
 
-// دالة مساعدة للاستدعاءات الآمنة
 export async function safeApiCall<T>(
   promise: Promise<any>
 ): Promise<{ data: T | null; error: ApiError | null }> {
@@ -124,7 +99,6 @@ export async function safeApiCall<T>(
   }
 }
 
-// معالج التوكن
 export class TokenManager {
   private static readonly TOKEN_KEY = 'auth_token'
   private static readonly REFRESH_TOKEN_KEY = 'refresh_token'
@@ -154,40 +128,21 @@ export class TokenManager {
     localStorage.removeItem(this.TOKEN_KEY)
     localStorage.removeItem(this.REFRESH_TOKEN_KEY)
   }
-
-  static isTokenExpired(token: string): boolean {
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]))
-      return payload.exp * 1000 < Date.now()
-    } catch {
-      return true
-    }
-  }
 }
 
-// Interceptor للتوكن التلقائي
 apiClient.use({
   onRequest: async ({ request }) => {
     const token = TokenManager.getToken()
-    if (token && !TokenManager.isTokenExpired(token)) {
+    if (token) {
       request.headers.set('Authorization', `Bearer ${token}`)
     }
     return request
   },
   onResponse: async ({ response }) => {
-    // إذا كان التوكن منتهي، حاول التحديث
     if (response.status === 401) {
-      const refreshToken = TokenManager.getRefreshToken()
-      if (refreshToken) {
-        // TODO: استدعاء endpoint تحديث التوكن
-        // const newToken = await refreshAccessToken(refreshToken)
-        // TokenManager.setToken(newToken)
-      } else {
-        TokenManager.clearTokens()
-        // إعادة التوجيه لصفحة تسجيل الدخول
-        if (typeof window !== 'undefined') {
-          window.location.href = '/auth/sign-in'
-        }
+      TokenManager.clearTokens()
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login'
       }
     }
     return response

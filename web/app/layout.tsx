@@ -1,23 +1,28 @@
-import "./globals.css";
-import { NavbarPolished } from "./components/NavbarPolished";
-import Providers from "./providers";
-import { ToastProvider } from "./components/toast/Toast";
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import type { Metadata } from 'next'
+import { Geist, Geist_Mono } from 'next/font/google'
+import { Analytics } from '@vercel/analytics/next'
+import './globals.css'
 
-export const metadata: Metadata = { title: "AuditOrbit — Admin" };
+const _geist = Geist({ subsets: ["latin"] });
+const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export const metadata: Metadata = {
+  title: 'v0 App',
+  description: 'Created with v0',
+  generator: 'v0.app',
+}
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode
+}>) {
   return (
-    <html lang="ar" dir="rtl">
-     <body className="bg-bg text-fg antialiased">
-        <ToastProvider>
-          <Providers>
-           <NavbarPolished />
-            <main className="mx-auto max-w-6xl p-6">{children}</main>
-          </Providers>
-        </ToastProvider>
+    <html lang="en">
+      <body className={`font-sans antialiased`}>
+        {children}
+        <Analytics />
       </body>
     </html>
-  );
+  )
 }
