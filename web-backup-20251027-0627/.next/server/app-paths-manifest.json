@@ -1,9 +1,0 @@
-{
-  "/manager/page": "app/manager/page.js",
-  "/page": "app/page.js",
-  "/manager/engagements/page": "app/manager/engagements/page.js",
-  "/manager/findings/page": "app/manager/findings/page.js",
-  "/manager/reports/page": "app/manager/reports/page.js",
-  "/admin/page": "app/admin/page.js",
-  "/admin/checklists/page": "app/admin/checklists/page.js"
-}

@@ -1,18 +1,27 @@
-# Node
-web/node_modules/
-web/.next/
-web/public/.dev.css
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Python
-__pycache__/
-*.pyc
+# dependencies
+/node_modules
 
-# Env
-.env
+# next.js
+/.next/
+/out/
 
-# Lighthouse Reports
-web/.lighthouse/
+# production
+/build
 
-# Playwright Test Results (keep screenshots for baseline tracking)
-web/test-results/
-web/playwright-report/
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
