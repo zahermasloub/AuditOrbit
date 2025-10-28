@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { apiClient, safeApiCall, TokenManager } from "@/lib/api-client"
-import { useToast } from "@/hooks/use-toast"
+import { apiClient, TokenManager } from "@/lib/api-client"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)

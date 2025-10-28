@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { FolderKanban, Search, FileChartColumn } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 const managerItems = [
   {

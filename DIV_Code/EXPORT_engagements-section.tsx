@@ -43,22 +43,9 @@ interface Engagement {
   estimatedHours: number
   actualHours: number
   riskLevel: "high" | "medium" | "low"
-  annualPlanId?: number
-  annualPlanTitle?: string
 }
 
-interface AnnualPlan {
-  id: number
-  year: string
-  title: string
-  status: string
-}
-
-interface EngagementsSectionProps {
-  annualPlans?: AnnualPlan[]
-}
-
-export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps) {
+export function EngagementsSection() {
   const [engagements, setEngagements] = useState<Engagement[]>([
     {
       id: 1,
@@ -77,8 +64,6 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
       estimatedHours: 120,
       actualHours: 78,
       riskLevel: "high",
-      annualPlanId: 1,
-      annualPlanTitle: "الخطة السنوية للتدقيق الداخلي 2025",
     },
     {
       id: 2,
@@ -97,8 +82,6 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
       estimatedHours: 100,
       actualHours: 30,
       riskLevel: "high",
-      annualPlanId: 1,
-      annualPlanTitle: "الخطة السنوية للتدقيق الداخلي 2025",
     },
     {
       id: 3,
@@ -117,8 +100,6 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
       estimatedHours: 150,
       actualHours: 135,
       riskLevel: "high",
-      annualPlanId: 1,
-      annualPlanTitle: "الخطة السنوية للتدقيق الداخلي 2025",
     },
   ])
 
@@ -136,12 +117,9 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
     objectives: "",
     scope: "",
     criteria: "",
-    annualPlanId: "",
   })
 
   const handleCreateEngagement = () => {
-    const selectedPlan = annualPlans.find((plan) => plan.id === Number.parseInt(formData.annualPlanId))
-
     const newEngagement: Engagement = {
       id: engagements.length + 1,
       title: formData.title,
@@ -159,8 +137,6 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
       estimatedHours: Number.parseInt(formData.estimatedHours),
       actualHours: 0,
       riskLevel: "medium",
-      annualPlanId: formData.annualPlanId ? Number.parseInt(formData.annualPlanId) : undefined,
-      annualPlanTitle: selectedPlan?.title,
     }
     setEngagements([newEngagement, ...engagements])
     setShowCreateDialog(false)
@@ -175,7 +151,6 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
       objectives: "",
       scope: "",
       criteria: "",
-      annualPlanId: "",
     })
   }
 
@@ -354,14 +329,6 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
                     </Badge>
                   </div>
                   <p className="text-slate-400 text-sm mb-3">{engagement.description}</p>
-                  {engagement.annualPlanTitle && (
-                    <div className="mb-3">
-                      <Badge variant="outline" className="border-cyan-500/30 text-cyan-300 bg-cyan-500/10">
-                        <Calendar className="h-3 w-3 ml-1" />
-                        {engagement.annualPlanTitle}
-                      </Badge>
-                    </div>
-                  )}
                   <div className="flex items-center gap-4 text-sm text-slate-400">
                     <div className="flex items-center gap-1">
                       <Building2 className="h-4 w-4" />
@@ -450,35 +417,6 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 mt-4">
-            {/* Annual Plan Dropdown */}
-            <div className="space-y-2">
-              <Label htmlFor="annualPlan" className="text-slate-300">
-                الخطة السنوية <span className="text-cyan-400">*</span>
-              </Label>
-              <Select
-                value={formData.annualPlanId}
-                onValueChange={(value) => setFormData({ ...formData, annualPlanId: value })}
-              >
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
-                  <SelectValue placeholder="اختر الخطة السنوية" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-800 border-slate-700 text-white">
-                  {annualPlans.length > 0 ? (
-                    annualPlans.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.id.toString()}>
-                        {plan.title} ({plan.year})
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>
-                      لا توجد خطط سنوية متاحة
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-slate-500">اربط هذه المهمة بخطة سنوية محددة</p>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="title" className="text-slate-300">
                 عنوان المهمة
@@ -680,14 +618,6 @@ export function EngagementsSection({ annualPlans = [] }: EngagementsSectionProps
                     </CardContent>
                   </Card>
                 </div>
-                {selectedEngagement.annualPlanTitle && (
-                  <Card className="bg-slate-800 border-slate-700">
-                    <CardContent className="pt-4">
-                      <p className="text-sm text-slate-400 mb-1">الخطة السنوية</p>
-                      <p className="text-lg font-semibold text-cyan-300">{selectedEngagement.annualPlanTitle}</p>
-                    </CardContent>
-                  </Card>
-                )}
                 <div className="space-y-2">
                   <p className="text-sm text-slate-400">التقدم</p>
                   <Progress value={selectedEngagement.progress} className="h-3" />

@@ -52,7 +52,7 @@ export function ReportsSection() {
   const [filterStatus, setFilterStatus] = useState("all")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
 
-  const [reports, setReports] = useState<Report[]>([
+  const [reports] = useState<Report[]>([
     {
       id: 1,
       title: "تقرير تدقيق نظام المشتريات - 2025",

@@ -54,7 +54,7 @@ export function FollowUpSection() {
   const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<FollowUpItem | null>(null)
 
-  const [followUpItems, setFollowUpItems] = useState<FollowUpItem[]>([
+  const [followUpItems] = useState<FollowUpItem[]>([
     {
       id: 1,
       finding: "ضعف في ضوابط الموافقات على المشتريات",

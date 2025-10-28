@@ -40,7 +40,7 @@ import {
   Cell,
 } from "recharts"
 import { AnnualPlansSection } from "@/components/annual-plans-section"
-import { EngagementsSectionNew } from "@/components/engagements-section-new"
+import { EngagementsSection } from "@/components/engagements-section"
 import { ChecklistsSection } from "@/components/checklists-section"
 import { EvidenceSection } from "@/components/evidence-section"
 import { FindingsSection } from "@/components/findings-section"
@@ -63,6 +63,12 @@ export default function DashboardPage() {
     Awaited<ReturnType<typeof dashboardApi.getRecentEngagements>>
   >([])
   const [isLoading, setIsLoading] = useState(true)
+  
+  // Sample annual plans data (can be replaced with API call)
+  const [annualPlans] = useState([
+    { id: 1, year: "2025", title: "الخطة السنوية للتدقيق الداخلي 2025", status: "active" },
+    { id: 2, year: "2024", title: "الخطة السنوية للتدقيق الداخلي 2024", status: "completed" },
+  ])
 
   // Load dashboard data from API
   useEffect(() => {
@@ -547,7 +553,7 @@ export default function DashboardPage() {
 
           {activeSection === "annual-plans" && <AnnualPlansSection />}
 
-          {activeSection === "engagements" && <EngagementsSectionNew />}
+          {activeSection === "engagements" && <EngagementsSection annualPlans={annualPlans} />}
 
           {activeSection === "checklists" && <ChecklistsSection />}
 

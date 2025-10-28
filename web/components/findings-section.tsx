@@ -54,9 +54,9 @@ export function FindingsSection() {
   const [filterSeverity, setFilterSeverity] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null)
+  // selectedFinding and setSelectedFinding removed as unused
 
-  const [findings, setFindings] = useState<Finding[]>([
+  const [findings] = useState<Finding[]>([
     {
       id: 1,
       title: "ضعف في ضوابط الموافقات على المشتريات",

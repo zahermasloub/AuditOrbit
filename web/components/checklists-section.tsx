@@ -49,7 +49,7 @@ interface WorkingPaper {
 
 export function ChecklistsSection() {
   const [activeTab, setActiveTab] = useState("checklists")
-  const [checklists, setChecklists] = useState<Checklist[]>([
+  const [checklists] = useState<Checklist[]>([
     {
       id: 1,
       title: "قائمة تحقق المشتريات",
@@ -105,7 +105,7 @@ export function ChecklistsSection() {
     },
   ])
 
-  const [workingPapers, setWorkingPapers] = useState<WorkingPaper[]>([
+  const [workingPapers] = useState<WorkingPaper[]>([
     {
       id: 1,
       title: "اختبار عينة المشتريات",
@@ -134,8 +134,9 @@ export function ChecklistsSection() {
     },
   ])
 
-  const [showChecklistDialog, setShowChecklistDialog] = useState(false)
-  const [showWorkingPaperDialog, setShowWorkingPaperDialog] = useState(false)
+  // Dialog states removed as they are not used
+  // const [showChecklistDialog, setShowChecklistDialog] = useState(false)
+  // const [showWorkingPaperDialog, setShowWorkingPaperDialog] = useState(false)
   const [showViewChecklistDialog, setShowViewChecklistDialog] = useState(false)
   const [selectedChecklist, setSelectedChecklist] = useState<Checklist | null>(null)
 
@@ -233,14 +234,14 @@ export function ChecklistsSection() {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={() => setShowChecklistDialog(true)}
+            onClick={() => console.log('Create checklist - Not implemented yet')}
             className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
           >
             <Plus className="h-4 w-4 ml-2" />
             قائمة تحقق جديدة
           </Button>
           <Button
-            onClick={() => setShowWorkingPaperDialog(true)}
+            onClick={() => console.log('Create working paper - Not implemented yet')}
             variant="outline"
             className="border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/10 bg-transparent"
           >
