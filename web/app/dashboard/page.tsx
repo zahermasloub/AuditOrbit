@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import {
   LayoutDashboard,
   FileText,
@@ -40,7 +41,6 @@ import {
   Cell,
 } from "recharts"
 import { AnnualPlansSection } from "@/components/annual-plans-section"
-import { EngagementsSection } from "@/components/engagements-section"
 import { ChecklistsSection } from "@/components/checklists-section"
 import { EvidenceSection } from "@/components/evidence-section"
 import { FindingsSection } from "@/components/findings-section"
@@ -230,20 +230,36 @@ export default function DashboardPage() {
 
         {/* Menu Items */}
         <nav className="flex-1 p-4 space-y-1">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveSection(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                activeSection === item.id
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
-                  : "text-slate-400 hover:bg-slate-800 hover:text-white"
-              }`}
-            >
-              <item.icon className="h-5 w-5" />
-              <span className="font-medium">{item.label}</span>
-            </button>
-          ))}
+          {menuItems.map((item) => {
+            // المهام التدقيقية تفتح صفحة منفصلة
+            if (item.id === "engagements") {
+              return (
+                <Link key={item.id} href="/engagements">
+                  <button
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all text-slate-400 hover:bg-slate-800 hover:text-white"
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                </Link>
+              )
+            }
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveSection(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  activeSection === item.id
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium">{item.label}</span>
+              </button>
+            )
+          })}
         </nav>
 
         {/* User Profile */}
@@ -289,7 +305,6 @@ export default function DashboardPage() {
                 <p className="text-slate-400 text-sm">
                   {activeSection === "dashboard" && "نظرة شاملة على أنشطة التدقيق"}
                   {activeSection === "annual-plans" && "إدارة الخطط السنوية للتدقيق"}
-                  {activeSection === "engagements" && "إدارة المهام التدقيقية"}
                   {activeSection === "checklists" && "قوائم التحقق وأوراق العمل"}
                   {activeSection === "evidence" && "إدارة الأدلة والمستندات"}
                   {activeSection === "findings" && "النتائج والملاحظات التدقيقية"}
@@ -546,8 +561,6 @@ export default function DashboardPage() {
           )}
 
           {activeSection === "annual-plans" && <AnnualPlansSection />}
-
-          {activeSection === "engagements" && <EngagementsSection />}
 
           {activeSection === "checklists" && <ChecklistsSection />}
 
