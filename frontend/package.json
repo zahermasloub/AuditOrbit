@@ -19,6 +19,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@tanstack/react-query": "^5.90.5",
     "@tanstack/react-table": "^8.21.3",
     "@tremor/react": "^3.18.7",
     "echarts": "^6.0.0",
@@ -34,8 +35,10 @@
     "@tailwindcss/postcss": "^4.1.16",
     "@types/node": "^24.9.1",
     "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.38.0",
+    "lucide-react": "^0.548.0",
     "openapi-typescript": "^7.2.0",
     "playwright": "^1.56.1",
     "postcss": "^8.5.6",

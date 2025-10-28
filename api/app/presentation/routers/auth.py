@@ -30,10 +30,10 @@ def login(payload: LoginIn, db: Session = Depends(get_db)) -> TokenOut:
   try:
     user = db.execute(
       text(
-        '''SELECT u.id, u.email, u.name, u.password as hashed_password, u.locale, r.name as role
+        '''SELECT u.id, u.email, u.name, u.hashed_password as hashed_password, u.locale, r.name as role
         FROM users u
-        LEFT JOIN user_roles ur ON u.id = ur."userId"
-        LEFT JOIN roles r ON ur."roleId" = r.id
+        LEFT JOIN user_roles ur ON u.id = ur.user_id
+        LEFT JOIN roles r ON ur.role_id = r.id
         WHERE u.email = :email'''
       ),
       {"email": payload.email},

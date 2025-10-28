@@ -298,10 +298,35 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white relative">
+            
+            {/* Quick Links */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+                onClick={() => window.location.href = '/admin'}
+              >
+                Admin
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+                onClick={() => window.location.href = '/manager'}
+              >
+                Manager
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+                onClick={() => window.location.href = '/auditor'}
+              >
+                Auditor
+              </Button>
+              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
                 <Bell className="h-5 w-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </Button>
             </div>
           </div>
