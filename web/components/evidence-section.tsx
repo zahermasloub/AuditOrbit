@@ -19,9 +19,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Progress } from "@/components/ui/progress"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useEvidence } from "@/lib/hooks/useEvidence"
 import type { Evidence as ApiEvidence } from "@/lib/api"
+import { evidenceApi } from "@/lib/api"
 
 interface EvidenceItem {
   id: string
@@ -48,92 +50,92 @@ interface EvidenceItem {
 const SAMPLE_EVIDENCE: EvidenceItem[] = [
   {
     id: "1",
-    title: "????? ????????? 2024",
-    description: "????? ????? ????????? ????????",
+    title: "سياسة المشتريات 2024",
+    description: "نسخة محدثة من سياسة المشتريات",
     fileName: "procurement-policy-2024.pdf",
-    fileType: "PDF",
+    fileType: "application/pdf",
     fileSize: "2.4 MB",
-    uploadedBy: "???? ????",
+    uploadedBy: "أحمد علي",
     uploadedDate: "2025-01-15",
     engagementId: 1,
-    engagementTitle: "????? ???? ?????????",
+    engagementTitle: "مراجعة إدارة المشتريات",
     checklistItemId: 1,
     aiProcessed: true,
     aiExtractedData: {
-      documentType: "?????",
+      documentType: "سياسة",
       keyFields: [
-        { label: "??? ???????", value: "POL-2024-001" },
-        { label: "????? ????????", value: "2024-01-10" },
-        { label: "??????? ??", value: "?????? ????????" },
-        { label: "????? ????????", value: "2025-01-10" },
+        { label: "رقم الوثيقة", value: "POL-2024-001" },
+        { label: "تاريخ الإصدار", value: "2024-01-10" },
+        { label: "المعتمد من", value: "مجلس الإدارة" },
+        { label: "تاريخ المراجعة", value: "2025-01-10" },
       ],
       confidence: 95,
     },
-    tags: ["?????", "???????", "?????"],
+    tags: ["سياسات", "موافقات", "مشتريات"],
     status: "verified",
   },
   {
     id: "2",
-    title: "?????? ?????????",
-    description: "?????? ??????? ???????? ??? ?????????",
+    title: "مصفوفة الصلاحيات",
+    description: "الحدود المالية والمسؤوليات حسب المستويات",
     fileName: "approval-matrix.xlsx",
-    fileType: "Excel",
+    fileType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     fileSize: "156 KB",
-    uploadedBy: "???? ????",
+    uploadedBy: "سارة محمد",
     uploadedDate: "2025-01-16",
     engagementId: 1,
-    engagementTitle: "????? ???? ?????????",
+    engagementTitle: "مراجعة إدارة المشتريات",
     checklistItemId: 2,
     aiProcessed: true,
     aiExtractedData: {
-      documentType: "???? ??????",
+      documentType: "جدول صلاحيات",
       keyFields: [
-        { label: "??? ?????????", value: "5" },
-        { label: "???? ??????", value: "1,000,000 ????" },
-        { label: "??? ?????????", value: "12" },
+        { label: "عدد المستويات", value: "5" },
+        { label: "حد الصرف", value: "1,000,000 ريال" },
+        { label: "عدد الأقسام", value: "12" },
       ],
       confidence: 88,
     },
-    tags: ["???????", "???????", "???????"],
+    tags: ["صلاحيات", "إدارة", "مشتريات"],
     status: "verified",
   },
   {
     id: "3",
-    title: "???? ????? ??????",
-    description: "30 ??? ???? ????????",
+    title: "عينات أوامر شراء",
+    description: "30 أمر شراء للفترة المحددة",
     fileName: "purchase-orders-sample.pdf",
-    fileType: "PDF",
+    fileType: "application/pdf",
     fileSize: "8.7 MB",
-    uploadedBy: "???? ???",
+    uploadedBy: "محمد يوسف",
     uploadedDate: "2025-01-20",
     engagementId: 1,
-    engagementTitle: "????? ???? ?????????",
+    engagementTitle: "مراجعة إدارة المشتريات",
     aiProcessed: true,
     aiExtractedData: {
-      documentType: "????? ????",
+      documentType: "أمر شراء",
       keyFields: [
-        { label: "??? ???????", value: "30" },
-        { label: "?????? ??????", value: "2,450,000 ????" },
-        { label: "??????", value: "Q4 2024" },
+        { label: "عدد العينات", value: "30" },
+        { label: "القيمة الإجمالية", value: "2,450,000 ريال" },
+        { label: "الفترة", value: "الربع الرابع 2024" },
       ],
       confidence: 92,
     },
-    tags: ["????? ????", "????", "??????"],
+    tags: ["أوامر شراء", "عينات", "مشتريات"],
     status: "processed",
   },
   {
     id: "4",
-    title: "?????? ???? - ???? ABC",
-    description: "?????? ???? ????? ??????",
+    title: "فاتورة - شركة ABC",
+    description: "فاتورة شراء معدات مكتبية",
     fileName: "invoice-abc-2024-1234.pdf",
-    fileType: "PDF",
+    fileType: "application/pdf",
     fileSize: "345 KB",
-    uploadedBy: "???? ???",
+    uploadedBy: "ليلى خالد",
     uploadedDate: "2025-01-22",
     engagementId: 1,
-    engagementTitle: "????? ???? ?????????",
+    engagementTitle: "مراجعة إدارة المشتريات",
     aiProcessed: false,
-    tags: ["??????", "????"],
+    tags: ["فواتير", "مشتريات"],
     status: "processing",
   },
 ];
@@ -152,33 +154,31 @@ const formatFileSize = (size?: number | null): string => {
 
 const mapApiEvidence = (item: ApiEvidence): EvidenceItem => ({
   id: item.id,
-  title: item.filename ?? "???? ?????",
-  description: item.status ?? "",
-  fileName: item.filename ?? "",
-  fileType: item.mime_type ?? "unknown",
-  fileSize: formatFileSize(item.size_bytes),
-  uploadedBy: item.uploader_id ?? "??? ????",
+  title: (item as any).title ?? (item as any).file_name ?? item.filename ?? "دليل بدون عنوان",
+  description: (item as any).description ?? "",
+  fileName: item.filename ?? (item as any).file_name ?? "",
+  fileType: item.mime_type ?? (item as any).file_type ?? "unknown",
+  fileSize: formatFileSize(item.size_bytes ?? (item as any).file_size),
+  uploadedBy: (item as any).uploaded_by ?? "غير معروف",
   uploadedDate: item.created_at ?? "",
-  engagementId: parseInt(item.engagement_id, 10) || 0,
-  engagementTitle: item.engagement_id ?? "",
-  aiProcessed: item.status === "processed" || item.status === "verified",
+  engagementId: 0,
+  engagementTitle: "",
+  aiProcessed: false,
   tags: [],
-  status: item.status === "processed" || item.status === "verified" ? "verified" : "pending",
+  status: ((item as any).status as any) || "pending",
 });
 
 export function EvidenceSection() {
   const [evidence, setEvidence] = useState<EvidenceItem[]>(SAMPLE_EVIDENCE);
+  const [engagementFilter, setEngagementFilter] = useState<string>("")
   const {
     evidence: apiEvidence,
     loading,
     error,
-    uploadEvidence,
     refresh,
-  } = useEvidence({ page: 1, size: 50 });
-
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+    uploadEvidence,
+    deleteEvidence,
+  } = useEvidence({ engagement_id: engagementFilter || undefined });
 
   useEffect(() => {
     if (apiEvidence.length > 0) {
@@ -195,26 +195,50 @@ export function EvidenceSection() {
   const [selectedEvidence, setSelectedEvidence] = useState<EvidenceItem | null>(null)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadEngagementId, setUploadEngagementId] = useState<string>("")
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
-
+    if (!uploadEngagementId) {
+      setUploadError("يرجى إدخال معرف المهمة المرتبطة (engagement_id)")
+      return
+    }
+    const file = files[0]
     setIsUploading(true)
-    setUploadProgress(0)
+    setUploadProgress(5)
+    setUploadError(null)
+    try {
+      await uploadEvidence({ engagement_id: uploadEngagementId, file })
+      setUploadProgress(100)
+      setTimeout(() => {
+        setIsUploading(false)
+        setShowUploadDialog(false)
+        setUploadEngagementId("")
+        refresh()
+      }, 300)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'فشل رفع الدليل'
+      setUploadError(msg)
+      setIsUploading(false)
+    }
+  }
 
-    // Placeholder upload flow – integrate backend upload when endpoints are ready
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsUploading(false)
-          setShowUploadDialog(false)
-          refresh()
-          return 100
-        }
-        return prev + 10
-      })
-    }, 300)
+  const handleDownload = async (id: string) => {
+    try {
+      const url = await evidenceApi.getDownloadUrl(id)
+      if (url) window.open(url, '_blank')
+    } catch (e) {
+      console.error('Failed to get download URL', e)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteEvidence(id)
+    } catch (e) {
+      console.error('Failed to delete evidence', e)
+    }
   }
 
   const getStatusColor = (status: string) => {
@@ -261,19 +285,11 @@ export function EvidenceSection() {
   }
 
   const getFileIcon = (fileType: string) => {
-    switch (fileType.toLowerCase()) {
-      case "pdf":
-        return <FileText className="h-8 w-8 text-red-400" />
-      case "excel":
-      case "xlsx":
-        return <File className="h-8 w-8 text-green-400" />
-      case "image":
-      case "jpg":
-      case "png":
-        return <ImageIcon className="h-8 w-8 text-blue-400" />
-      default:
-        return <File className="h-8 w-8 text-slate-400" />
-    }
+    const t = (fileType || "").toLowerCase()
+    if (t.includes("pdf") || t.endsWith(".pdf")) return <FileText className="h-8 w-8 text-red-400" />
+    if (t.includes("excel") || t.includes("spreadsheet") || t.endsWith(".xlsx") || t.endsWith(".xls")) return <File className="h-8 w-8 text-green-400" />
+    if (t.includes("image") || t.includes("jpeg") || t.includes("jpg") || t.includes("png") || t.endsWith(".jpg") || t.endsWith(".png")) return <ImageIcon className="h-8 w-8 text-blue-400" />
+    return <File className="h-8 w-8 text-slate-400" />
   }
 
   const statusCounts = {
@@ -288,18 +304,33 @@ export function EvidenceSection() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="text-2xl font-bold text-white">إدارة الأدلة</h3>
           <p className="text-slate-400 mt-1">رفع وإدارة الأدلة التدقيقية مع معالجة ذكية بالذكاء الاصطناعي</p>
         </div>
-        <Button
-          onClick={() => setShowUploadDialog(true)}
-          className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
-        >
-          <Upload className="h-4 w-4 ml-2" />
-          رفع أدلة
-        </Button>
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="معرف المهمة (اختياري)"
+            value={engagementFilter}
+            onChange={(e) => setEngagementFilter(e.target.value)}
+            className="w-48"
+          />
+          <Button
+            variant="outline"
+            onClick={() => refresh()}
+            className="border-slate-700 text-slate-300 hover:text-white"
+          >
+            تحديث
+          </Button>
+          <Button
+            onClick={() => setShowUploadDialog(true)}
+            className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
+          >
+            <Upload className="h-4 w-4 ml-2" />
+            رفع أدلة
+          </Button>
+        </div>
       </div>
 
       {error && !loading && (
@@ -390,7 +421,7 @@ export function EvidenceSection() {
                   <h4 className="text-white font-semibold mb-1 truncate">{item.title}</h4>
                   <p className="text-slate-400 text-xs mb-2 line-clamp-2">{item.description}</p>
                   <div className="flex items-center gap-2">
-                    <Badge className={getStatusColor(item.status)} className="text-xs">
+                    <Badge className={`${getStatusColor(item.status)} text-xs`}>
                       <span className="ml-1">{getStatusIcon(item.status)}</span>
                       {getStatusLabel(item.status)}
                     </Badge>
@@ -446,11 +477,11 @@ export function EvidenceSection() {
                   <Eye className="h-4 w-4 ml-1" />
                   عرض
                 </Button>
-                <Button variant="ghost" size="sm" className="flex-1 text-slate-400 hover:text-white">
+                <Button variant="ghost" size="sm" className="flex-1 text-slate-400 hover:text-white" onClick={() => handleDownload(item.id)}>
                   <Download className="h-4 w-4 ml-1" />
                   تحميل
                 </Button>
-                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400">
+                <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400" onClick={() => handleDelete(item.id)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -474,9 +505,19 @@ export function EvidenceSection() {
                 <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
                 <p className="text-white font-medium mb-2">اسحب الملفات هنا أو انقر للاختيار</p>
                 <p className="text-slate-400 text-sm mb-4">PDF, Excel, Word, Images (حتى 10 MB)</p>
+                <div className="max-w-sm mx-auto mb-4 flex items-center gap-2">
+                  <Input
+                    placeholder="engagement_id"
+                    value={uploadEngagementId}
+                    onChange={(e) => setUploadEngagementId(e.target.value)}
+                  />
+                </div>
+                {uploadError && (
+                  <div className="text-rose-300 text-sm mb-2">{uploadError}</div>
+                )}
                 <input
                   type="file"
-                  multiple
+                  multiple={false}
                   onChange={(e) => handleFileUpload(e.target.files)}
                   className="hidden"
                   id="file-upload"

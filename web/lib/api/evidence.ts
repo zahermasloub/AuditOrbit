@@ -1,133 +1,81 @@
 import { apiClient } from './client'
 
+// Align types with backend EvidenceOut
 export interface Evidence {
   id: string
-  engagement_id: string
-  finding_id?: string
-  title: string
-  description?: string
-  type: 'document' | 'screenshot' | 'data' | 'interview' | 'observation' | 'other'
-  file_name?: string
-  file_path?: string
-  file_size?: number
-  file_type?: string
-  uploaded_by?: string
+  filename: string
+  mime_type?: string | null
+  size_bytes?: number | null
+  status: string
   created_at: string
-  updated_at: string
-}
-
-export interface EvidenceCreate {
-  engagement_id: string
-  finding_id?: string
-  title: string
-  description?: string
-  type: 'document' | 'screenshot' | 'data' | 'interview' | 'observation' | 'other'
-}
-
-export interface EvidenceUpload extends EvidenceCreate {
-  file: File
-}
-
-export interface EvidencePage {
-  items: Evidence[]
-  page: number
-  size: number
-  total: number
 }
 
 export interface EvidenceFilters {
-  page?: number
-  size?: number
   engagement_id?: string
-  finding_id?: string
-  type?: string
+}
+
+export interface EvidenceInitIn {
+  engagement_id: string
+  filename: string
+  mime_type?: string | null
+  size_bytes?: number | null
+}
+
+export interface EvidenceInitOut {
+  evidence_id: string
+  bucket: string
+  object_key: string
+  upload_url: string
+}
+
+export interface EvidenceConfirmIn {
+  size_bytes?: number | null
+  mime_type?: string | null
 }
 
 export const evidenceApi = {
-  /**
-   * Get paginated list of evidence
-   */
-  async list(filters: EvidenceFilters = {}): Promise<EvidencePage> {
+  // Get evidence list (optionally filtered by engagement)
+  async list(filters: EvidenceFilters = {}): Promise<Evidence[]> {
     const params = new URLSearchParams()
-    if (filters.page) params.append('page', String(filters.page))
-    if (filters.size) params.append('size', String(filters.size))
     if (filters.engagement_id) params.append('engagement_id', filters.engagement_id)
-    if (filters.finding_id) params.append('finding_id', filters.finding_id)
-    if (filters.type) params.append('type', filters.type)
-
-    const response = await apiClient.get<EvidencePage>(
-      `/evidence?${params.toString()}`
-    )
+    const response = await apiClient.get<Evidence[]>(`/evidence?${params.toString()}`)
     return response.data
   },
 
-  /**
-   * Upload evidence with file
-   */
-  async upload(data: EvidenceUpload): Promise<Evidence> {
-    const formData = new FormData()
-    formData.append('file', data.file)
-    formData.append('engagement_id', data.engagement_id)
-    if (data.finding_id) formData.append('finding_id', data.finding_id)
-    formData.append('title', data.title)
-    if (data.description) formData.append('description', data.description)
-    formData.append('type', data.type)
-
-    const token = localStorage.getItem('access_token')
-    const headers: Record<string, string> = {}
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+  // Upload using init -> PUT -> confirm
+  async upload(params: { engagement_id: string; file: File }): Promise<Evidence> {
+    // 1) init
+    const initBody: EvidenceInitIn = {
+      engagement_id: params.engagement_id,
+      filename: params.file.name,
+      mime_type: params.file.type || undefined,
+      size_bytes: params.file.size,
     }
+    const initRes = await apiClient.post<EvidenceInitOut>('/evidence/init', initBody)
+    const init = initRes.data
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/evidence/upload`, {
-      method: 'POST',
-      headers,
-      body: formData,
+    // 2) PUT to presigned URL
+    await fetch(init.upload_url, {
+      method: 'PUT',
+      body: params.file,
+      headers: initBody.mime_type ? { 'Content-Type': initBody.mime_type } : undefined,
     })
 
-    if (!response.ok) {
-      throw new Error('Failed to upload evidence')
+    // 3) confirm
+    const confirmBody: EvidenceConfirmIn = {
+      size_bytes: initBody.size_bytes,
+      mime_type: initBody.mime_type,
     }
-
-    return response.json()
+    const confirmRes = await apiClient.post<Evidence>(`/evidence/${init.evidence_id}/confirm`, confirmBody)
+    return confirmRes.data
   },
 
-  /**
-   * Create evidence without file
-   */
-  async create(data: EvidenceCreate): Promise<Evidence> {
-    const response = await apiClient.post<Evidence>('/evidence', data)
-    return response.data
-  },
-
-  /**
-   * Get a single evidence by ID
-   */
-  async get(id: string): Promise<Evidence> {
-    const response = await apiClient.get<Evidence>(`/evidence/${id}`)
-    return response.data
-  },
-
-  /**
-   * Update evidence
-   */
-  async update(id: string, data: Partial<EvidenceCreate>): Promise<Evidence> {
-    const response = await apiClient.put<Evidence>(`/evidence/${id}`, data)
-    return response.data
-  },
-
-  /**
-   * Delete evidence
-   */
   async delete(id: string): Promise<void> {
     await apiClient.delete(`/evidence/${id}`)
   },
 
-  /**
-   * Download evidence file
-   */
-  async download(id: string): Promise<Blob> {
-    const response = await apiClient.get<Blob>(`/evidence/${id}/download`)
-    return response.data
+  async getDownloadUrl(id: string): Promise<string> {
+    const res = await apiClient.get<{ url: string }>(`/evidence/${id}/download`)
+    return res.data.url
   },
 }

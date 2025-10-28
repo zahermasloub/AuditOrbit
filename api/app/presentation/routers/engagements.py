@@ -57,17 +57,17 @@ def list_engagements(
       f"""
         SELECT
           e.id::text AS id,
-          ''::text AS annual_plan_id,
+          e.annual_plan_id::text AS annual_plan_id,
           e.title,
-          e.objective AS scope,
-          'medium' AS risk_rating,
+          e.scope,
+          COALESCE(e.risk_rating, 'medium') AS risk_rating,
           e.status,
-          to_char(e."startDate", 'YYYY-MM-DD') AS start_date,
-          to_char(e."endDate", 'YYYY-MM-DD') AS end_date,
-          to_char(e."createdAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
+          to_char(e.start_date, 'YYYY-MM-DD') AS start_date,
+          to_char(e.end_date, 'YYYY-MM-DD') AS end_date,
+          to_char(e.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
         FROM engagements e
         {where_sql}
-        ORDER BY e."createdAt" DESC
+        ORDER BY e.created_at DESC
         OFFSET :offset LIMIT :limit
       """
     ),
@@ -86,9 +86,9 @@ def create_engagement(
 ) -> EngagementOut:
   enforce(db, user_id, "engagements", "create")
 
-  # Check if annual plan exists using fiscalYear instead of year
+  # Check if annual plan exists
   plan = db.execute(
-    text('SELECT id::text AS id FROM annual_plans WHERE "fiscalYear" = :year'),
+    text('SELECT id::text AS id FROM annual_plans WHERE year = :year'),
     {"year": payload.annual_plan_year},
   ).mappings().first()
   
@@ -98,16 +98,14 @@ def create_engagement(
     plan_id = str(uuid.uuid4())
     db.execute(
       text('''INSERT INTO annual_plans(
-        id, title, "fiscalYear", version, status, "createdBy", "createdAt", "updatedAt", plan_ref
+        id, title, year, status, created_at
       ) VALUES (
-        :id, :title, :year, '1.0', 'DRAFT', :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, :ref
+        :id, :title, :year, 'draft', CURRENT_TIMESTAMP
       )'''),
       {
         "id": plan_id,
         "year": payload.annual_plan_year, 
         "title": f"Annual Plan {payload.annual_plan_year}",
-        "user_id": user_id,
-        "ref": f"AP-{payload.annual_plan_year}"
       },
     )
     db.commit()
@@ -117,48 +115,34 @@ def create_engagement(
   import uuid
   engagement_id = str(uuid.uuid4())
   
-  # Generate unique code
-  code = f"ENG-{payload.annual_plan_year}-{engagement_id[:8].upper()}"
-  
   created = db.execute(
     text(
       '''
         INSERT INTO engagements(
-          id, code, title, objective, "scopeJson", "criteriaJson", 
-          "constraintsJson", "auditeeUnitsJson", "stakeholdersJson",
-          "startDate", "endDate", "budgetHours", status, "createdBy", 
-          "createdAt", "updatedAt"
+          id, annual_plan_id, title, scope, risk_rating,
+          start_date, end_date, status, created_at
         )
         VALUES (
-          :id, :code, :title, :objective, :scope_json, :criteria_json,
-          :constraints_json, :auditee_units_json, :stakeholders_json,
-          CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 40, 
-          'DRAFT', :user_id, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+          :id, :plan_id, :title, :scope, 'medium',
+          CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'planned', CURRENT_TIMESTAMP
         )
         RETURNING
           id::text AS id,
-          :plan_id AS annual_plan_id,
+          annual_plan_id::text AS annual_plan_id,
           title,
-          objective AS scope,
-          'medium' AS risk_rating,
+          scope,
+          risk_rating,
           status::text AS status,
-          to_char("startDate", 'YYYY-MM-DD') AS start_date,
-          to_char("endDate", 'YYYY-MM-DD') AS end_date,
-          to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
+          to_char(start_date, 'YYYY-MM-DD') AS start_date,
+          to_char(end_date, 'YYYY-MM-DD') AS end_date,
+          to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
       '''
     ),
     {
       "id": engagement_id,
-      "code": code,
-      "title": payload.title,
-      "objective": payload.scope or "Audit objective",
-      "scope_json": '{"description": "' + (payload.scope or "Audit scope").replace('"', '\\"') + '"}',
-      "criteria_json": '[]',
-      "constraints_json": '[]',
-      "auditee_units_json": '[]',
-      "stakeholders_json": '[]',
-      "user_id": user_id,
       "plan_id": plan["id"],
+      "title": payload.title,
+      "scope": payload.scope or "Audit scope",
     },
   ).mappings().first()
   db.commit()

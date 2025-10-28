@@ -1,15 +1,14 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { Plus, FileText, Calendar, Target, Loader2, RefreshCw } from "lucide-react"
+import { useMemo, useState, useEffect } from "react"
+import { Plus, Loader2, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { useEngagements } from "@/lib/hooks/useEngagements"
 import type { Engagement, EngagementCreate, EngagementStatus } from "@/lib/api"
 
@@ -24,50 +23,254 @@ const statusLabels: Record<EngagementStatus, string> = {
   CANCELLED: "ملغى",
 }
 
-const statusColors: Record<EngagementStatus, string> = {
-  DRAFT: "bg-slate-500/20 text-slate-200 border-slate-500/30",
-  PLANNING: "bg-indigo-500/20 text-indigo-200 border-indigo-500/30",
-  IN_PROGRESS: "bg-blue-500/20 text-blue-200 border-blue-500/30",
-  FIELDWORK: "bg-amber-500/20 text-amber-200 border-amber-500/30",
-  REPORTING: "bg-cyan-500/20 text-cyan-200 border-cyan-500/30",
-  REVIEW: "bg-purple-500/20 text-purple-200 border-purple-500/30",
-  COMPLETED: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
-  CANCELLED: "bg-rose-500/20 text-rose-200 border-rose-500/30",
-}
-
 const riskLabels: Record<string, string> = {
   high: "عالي",
   medium: "متوسط",
   low: "منخفض",
 }
 
-const riskColors: Record<string, string> = {
-  high: "bg-rose-500/20 text-rose-200 border-rose-500/30",
-  medium: "bg-yellow-500/20 text-yellow-200 border-yellow-500/30",
-  low: "bg-emerald-500/20 text-emerald-200 border-emerald-500/30",
+// StatusBadge component inline (inspired by backup)
+function StatusBadge({ value }: { value: string | null | undefined }) {
+  const normalized = (value ?? "").toLowerCase()
+  let variant: "default" | "secondary" | "destructive" | "outline" = "default"
+  
+  if (normalized.includes("completed") || normalized.includes("مكتمل")) {
+    variant = "default" // success tone
+  } else if (normalized.includes("progress") || normalized.includes("التنفيذ")) {
+    variant = "default"
+  } else if (normalized.includes("draft") || normalized.includes("مسودة")) {
+    variant = "secondary"
+  } else if (normalized.includes("cancelled") || normalized.includes("ملغى")) {
+    variant = "destructive"
+  }
+  
+  return (
+    <Badge variant={variant} className="text-xs">
+      {value ?? "—"}
+    </Badge>
+  )
 }
 
-type UiEngagement = {
+// FilterBar component (matching backup's time range filter)
+function FilterBar({ onRangeChange }: { onRangeChange: (range: number) => void }) {
+  const [activeRange, setActiveRange] = useState(30)
+  const ranges = [30, 60, 90]
+
+  const handleSelect = (value: number) => {
+    setActiveRange(value)
+    onRangeChange(value)
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {ranges.map((value) => {
+        const isActive = value === activeRange
+        return (
+          <Button
+            key={value}
+            type="button"
+            variant={isActive ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleSelect(value)}
+          >
+            آخر {value} يومًا
+          </Button>
+        )
+      })}
+    </div>
+  )
+}
+
+// DataTable component (matching backup's table structure)
+type Column<T> = {
+  header: React.ReactNode
+  accessorKey: keyof T | string
+  cell?: (row: T) => React.ReactNode
+}
+
+function DataTable<T extends Record<string, unknown>>({
+  columns,
+  data,
+  pageSize = 10,
+}: {
+  columns: Column<T>[]
+  data: T[]
+  pageSize?: number
+}) {
+  const [page, setPage] = useState(0)
+  const [sort, setSort] = useState<{ key: string; dir: "asc" | "desc" } | null>(null)
+
+  const sortedData = useMemo(() => {
+    if (!sort) return data
+    const snapshot = [...data]
+    snapshot.sort((a, b) => {
+      const aVal = a[sort.key as keyof T]
+      const bVal = b[sort.key as keyof T]
+      const comparison = String(aVal ?? "").localeCompare(String(bVal ?? ""), "ar")
+      return sort.dir === "asc" ? comparison : -comparison
+    })
+    return snapshot
+  }, [data, sort])
+
+  const pageRows = useMemo(
+    () => sortedData.slice(page * pageSize, page * pageSize + pageSize),
+    [page, pageSize, sortedData]
+  )
+
+  const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize))
+
+  return (
+    <div className="rounded-2xl border border-border">
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-muted/30 text-right">
+            <tr>
+              {columns.map((column, index) => {
+                const key = String(column.accessorKey)
+                const isActive = sort?.key === key
+                const indicator = isActive ? (sort?.dir === "asc" ? " ▲" : " ▼") : ""
+
+                return (
+                  <th
+                    key={index}
+                    className="cursor-pointer select-none px-3 py-2 font-medium"
+                    onClick={() => {
+                      setSort((current) => {
+                        if (!current || current.key !== key) {
+                          return { key, dir: "asc" }
+                        }
+                        return { key, dir: current.dir === "asc" ? "desc" : "asc" }
+                      })
+                    }}
+                  >
+                    {column.header}
+                    {indicator}
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody>
+            {pageRows.length ? (
+              pageRows.map((row, rowIndex) => (
+                <tr key={rowIndex} className="border-t border-border hover:bg-muted/15">
+                  {columns.map((column, columnIndex) => {
+                    const value = column.cell
+                      ? column.cell(row)
+                      : row[column.accessorKey as keyof T]
+
+                    return (
+                      <td key={`${rowIndex}-${columnIndex}`} className="px-3 py-2 align-middle">
+                        {value !== undefined && value !== null ? String(value) : "—"}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td className="px-3 py-6 text-center text-sm opacity-70" colSpan={columns.length}>
+                  لا توجد بيانات
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex items-center justify-end gap-2 p-2 text-sm">
+        <span className="px-2 opacity-70">
+          صفحة {page + 1}/{totalPages}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setPage((prev) => Math.max(0, prev - 1))}
+          disabled={page === 0}
+        >
+          السابق
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setPage((prev) => (prev + 1 < totalPages ? prev + 1 : prev))}
+          disabled={page + 1 >= totalPages}
+        >
+          التالي
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// DataTableToolbar (matching backup's search with debounce)
+function DataTableToolbar({
+  onSearch,
+  placeholder = "ابحث...",
+  right,
+}: {
+  onSearch?: (query: string) => void
+  placeholder?: string
+  right?: React.ReactNode
+}) {
+  const [query, setQuery] = useState("")
+
+  useEffect(() => {
+    if (!onSearch) return
+    const handle = setTimeout(() => {
+      onSearch(query.trim())
+    }, 300)
+    return () => clearTimeout(handle)
+  }, [onSearch, query])
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="min-w-[240px] max-w-md">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder={placeholder}
+          aria-label="بحث"
+          className="bg-background"
+        />
+      </div>
+      {right}
+    </div>
+  )
+}
+
+// Format date helper
+function formatPeriod(value?: string | null) {
+  if (!value) return "—"
+  try {
+    const parsed = new Date(value)
+    if (Number.isNaN(parsed.getTime())) return value
+    return parsed.toLocaleDateString("ar-SA", { month: "short", day: "numeric" })
+  } catch {
+    return value
+  }
+}
+
+type EngagementRow = {
   id: string
   title: string
   scope: string
-  status: EngagementStatus
-  riskRating: string
-  startDate?: string | null
-  endDate?: string | null
-  createdAt: string
+  status: string
+  risk_rating: string
+  start_date?: string | null
+  end_date?: string | null
 }
 
-function toUiEngagement(engagement: Engagement): UiEngagement {
+function toEngagementRow(engagement: Engagement): EngagementRow {
   return {
     id: engagement.id,
     title: engagement.title,
     scope: engagement.scope ?? "غير محدد",
     status: engagement.status,
-    riskRating: (engagement.risk_rating ?? "medium").toLowerCase(),
-    startDate: engagement.start_date,
-    endDate: engagement.end_date,
-    createdAt: engagement.created_at,
+    risk_rating: (engagement.risk_rating ?? "medium").toLowerCase(),
+    start_date: engagement.start_date,
+    end_date: engagement.end_date,
   }
 }
 
@@ -78,12 +281,11 @@ export function EngagementsSection() {
     error,
     createEngagement,
     refresh,
-  } = useEngagements({ page: 1, size: 20 })
+  } = useEngagements({ page: 1, size: 200 })
 
-  const engagements = useMemo(() => apiEngagements.map(toUiEngagement), [apiEngagements])
+  const engagements = useMemo(() => apiEngagements.map(toEngagementRow), [apiEngagements])
 
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [selectedEngagement, setSelectedEngagement] = useState<UiEngagement | null>(null)
   const [formData, setFormData] = useState<EngagementCreate>({
     title: "",
     scope: "",
@@ -92,6 +294,47 @@ export function EngagementsSection() {
   })
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [search, setSearch] = useState("")
+  const [range, setRange] = useState(30)
+
+  const filteredEngagements = useMemo(() => {
+    if (!search) return engagements
+    const query = search.toLowerCase()
+    return engagements.filter(
+      (eng) =>
+        eng.title.toLowerCase().includes(query) ||
+        eng.scope.toLowerCase().includes(query) ||
+        eng.status.toLowerCase().includes(query)
+    )
+  }, [engagements, search])
+
+  const columns = useMemo<Column<EngagementRow>[]>(
+    () => [
+      { header: "العنوان", accessorKey: "title" },
+      { header: "النطاق", accessorKey: "scope" },
+      {
+        header: "الحالة",
+        accessorKey: "status",
+        cell: (row: EngagementRow) => <StatusBadge value={statusLabels[row.status as EngagementStatus] ?? row.status} />,
+      },
+      {
+        header: "التصنيف",
+        accessorKey: "risk_rating",
+        cell: (row: EngagementRow) => <StatusBadge value={riskLabels[row.risk_rating] ?? row.risk_rating} />,
+      },
+      {
+        header: "بداية",
+        accessorKey: "start_date",
+        cell: (row: EngagementRow) => formatPeriod(row.start_date),
+      },
+      {
+        header: "استحقاق",
+        accessorKey: "end_date",
+        cell: (row: EngagementRow) => formatPeriod(row.end_date),
+      },
+    ],
+    []
+  )
 
   const handleCreate = async () => {
     if (!formData.title.trim()) {
@@ -124,113 +367,66 @@ export function EngagementsSection() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <section className="space-y-4">
+      {/* Header matching backup's style */}
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-2xl font-bold text-white">المهام الرقابية</h3>
-          <p className="text-slate-400 mt-1">عرض المهام المضافة من قاعدة البيانات المحدثة</p>
+          <h1 className="text-2xl font-bold text-foreground">المهام الرقابية</h1>
+          <p className="text-sm text-muted-foreground mt-1">عرض حالة المهام مع الفلاتر الزمنية والبحث.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="border-slate-700 text-slate-200" onClick={refresh} disabled={loading}>
-            <RefreshCw className="h-4 w-4 ml-2" /> تحديث
-          </Button>
-          <Button onClick={() => setShowCreateDialog(true)} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-            <Plus className="h-4 w-4 ml-2" /> مهمة جديدة
-          </Button>
-        </div>
-      </div>
+        <FilterBar onRangeChange={setRange} />
+      </header>
 
+      {/* Toolbar matching backup's search and buttons */}
+      <DataTableToolbar
+        onSearch={setSearch}
+        placeholder="ابحث بعنوان المهمة أو النطاق"
+        right={
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">النطاق: آخر {range} يومًا</span>
+            <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              تحديث
+            </Button>
+            <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="h-4 w-4" />
+              جديد
+            </Button>
+          </div>
+        }
+      />
+
+      {/* Error alert matching backup's style */}
       {error && (
-        <div className="p-3 border border-rose-500/40 bg-rose-500/10 text-rose-200 rounded-lg text-sm">
-          {error}
+        <div className="rounded-2xl border border-dashed border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive">
+          حدث خطأ في قاعدة البيانات: {error}
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {loading && engagements.length === 0 && (
-          <Card className="bg-slate-900 border-slate-800 md:col-span-2 xl:col-span-3">
-            <CardContent className="flex items-center justify-center gap-3 py-12 text-slate-300">
-              <Loader2 className="h-5 w-5 animate-spin" /> يجري تحميل المهام...
-            </CardContent>
-          </Card>
-        )}
+      {/* Loading state */}
+      {loading && engagements.length === 0 ? (
+        <div className="rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+          جارٍ تحميل المهام…
+        </div>
+      ) : (
+        /* DataTable matching backup's table structure */
+        <DataTable<EngagementRow> columns={columns} data={filteredEngagements} pageSize={12} />
+      )}
 
-        {!loading && engagements.length === 0 && (
-          <Card className="bg-slate-900 border-slate-800 md:col-span-2 xl:col-span-3">
-            <CardContent className="py-12 text-center text-slate-400">
-              لا توجد مهام مسجلة حتى الآن
-            </CardContent>
-          </Card>
-        )}
-
-        {engagements.map((engagement) => (
-          <Card
-            key={engagement.id}
-            className="bg-slate-900 border-slate-800 hover:border-indigo-500/40 transition-colors"
-          >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
-                <FileText className="h-4 w-4 text-indigo-300" />
-                <span className="truncate" title={engagement.title}>
-                  {engagement.title}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className={statusColors[engagement.status]}>
-                  {statusLabels[engagement.status]}
-                </Badge>
-                <Badge variant="outline" className={riskColors[engagement.riskRating] ?? riskColors.medium}>
-                  {riskLabels[engagement.riskRating] ?? riskLabels.medium}
-                </Badge>
-              </div>
-
-              <div className="space-y-2 text-sm text-slate-300">
-                <p className="line-clamp-3 whitespace-pre-line">{engagement.scope}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-sm text-slate-400">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <div>
-                    <p className="text-xs text-slate-500">بداية المهمة</p>
-                    <p className="text-slate-200">{engagement.startDate ?? "غير محدد"}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  <div>
-                    <p className="text-xs text-slate-500">نهاية المهمة</p>
-                    <p className="text-slate-200">{engagement.endDate ?? "غير محدد"}</p>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="ghost"
-                className="w-full justify-center text-slate-200 hover:text-white"
-                onClick={() => setSelectedEngagement(engagement)}
-              >
-                <Target className="h-4 w-4 ml-2" /> عرض التفاصيل
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
+      {/* Create Dialog - keeping existing implementation */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-lg">
+        <DialogContent className="bg-card border-border text-foreground max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-xl">إضافة مهمة رقابية</DialogTitle>
-            <DialogDescription className="text-slate-400">
+            <DialogDescription className="text-muted-foreground">
               سيتم حفظ المهمة بالحد الأدنى من البيانات المطلوبة (العنوان، السنة، مستوى الخطورة).
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
             {submissionError && (
-              <div className="p-3 border border-rose-500/40 bg-rose-500/10 text-rose-200 rounded-lg text-sm">
+              <div className="p-3 border border-destructive/40 bg-destructive/10 text-destructive rounded-lg text-sm">
                 {submissionError}
               </div>
             )}
@@ -242,7 +438,6 @@ export function EngagementsSection() {
                 value={formData.title}
                 onChange={(event) => setFormData((prev) => ({ ...prev, title: event.target.value }))}
                 placeholder="مراجعة إدارة المشتريات"
-                className="bg-slate-800 border-slate-700 text-white"
               />
             </div>
 
@@ -253,7 +448,6 @@ export function EngagementsSection() {
                 value={formData.scope ?? ""}
                 onChange={(event) => setFormData((prev) => ({ ...prev, scope: event.target.value }))}
                 placeholder="ملخص نطاق المهمة أو الأهداف"
-                className="bg-slate-800 border-slate-700 text-white"
                 rows={3}
               />
             </div>
@@ -270,7 +464,6 @@ export function EngagementsSection() {
                   onChange={(event) =>
                     setFormData((prev) => ({ ...prev, annual_plan_year: Number(event.target.value) }))
                   }
-                  className="bg-slate-800 border-slate-700 text-white"
                 />
               </div>
               <div className="space-y-2">
@@ -281,10 +474,10 @@ export function EngagementsSection() {
                     setFormData((prev) => ({ ...prev, risk_rating: value }))
                   }
                 >
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                  <SelectTrigger>
                     <SelectValue placeholder="اختر المستوى" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-900 border-slate-700 text-white">
+                  <SelectContent>
                     <SelectItem value="high">عالي</SelectItem>
                     <SelectItem value="medium">متوسط</SelectItem>
                     <SelectItem value="low">منخفض</SelectItem>
@@ -296,7 +489,6 @@ export function EngagementsSection() {
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 variant="outline"
-                className="border-slate-700 text-slate-200"
                 onClick={() => setShowCreateDialog(false)}
                 disabled={submitting}
               >
@@ -304,7 +496,6 @@ export function EngagementsSection() {
               </Button>
               <Button
                 onClick={handleCreate}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white"
                 disabled={submitting}
               >
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "حفظ"}
@@ -313,58 +504,6 @@ export function EngagementsSection() {
           </div>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={!!selectedEngagement} onOpenChange={(open) => !open && setSelectedEngagement(null)}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl">تفاصيل المهمة</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              عرض البيانات كما توفرها الواجهة البرمجية المحدثة.
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedEngagement && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <p className="text-sm text-slate-400">عنوان المهمة</p>
-                <p className="text-lg font-semibold text-white">{selectedEngagement.title}</p>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm text-slate-400">النطاق</p>
-                <p className="whitespace-pre-line text-slate-200">{selectedEngagement.scope}</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-300">
-                <div className="space-y-1">
-                  <p className="text-slate-500 text-xs">الحالة</p>
-                  <Badge variant="outline" className={statusColors[selectedEngagement.status]}>
-                    {statusLabels[selectedEngagement.status]}
-                  </Badge>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-slate-500 text-xs">التصنيف</p>
-                  <Badge variant="outline" className={riskColors[selectedEngagement.riskRating] ?? riskColors.medium}>
-                    {riskLabels[selectedEngagement.riskRating] ?? riskLabels.medium}
-                  </Badge>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs">البداية</p>
-                  <p>{selectedEngagement.startDate ?? "غير محدد"}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs">النهاية</p>
-                  <p>{selectedEngagement.endDate ?? "غير محدد"}</p>
-                </div>
-                <div>
-                  <p className="text-slate-500 text-xs">تاريخ الإنشاء</p>
-                  <p>{selectedEngagement.createdAt}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+    </section>
   )
 }

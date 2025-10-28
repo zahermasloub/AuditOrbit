@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { engagementsApi, Engagement, EngagementsFilters } from '@/lib/api'
 
 export function useEngagements(filters: EngagementsFilters = {}) {
@@ -8,11 +8,7 @@ export function useEngagements(filters: EngagementsFilters = {}) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadEngagements()
-  }, [page, filters.status, filters.size])
-
-  async function loadEngagements() {
+  const loadEngagements = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -25,7 +21,11 @@ export function useEngagements(filters: EngagementsFilters = {}) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters.status, filters.size, page])
+
+  useEffect(() => {
+    loadEngagements()
+  }, [loadEngagements])
 
   async function createEngagement(data: Parameters<typeof engagementsApi.create>[0]) {
     try {
@@ -43,9 +43,9 @@ export function useEngagements(filters: EngagementsFilters = {}) {
     }
   }
 
-  function refresh() {
+  const refresh = useCallback(() => {
     loadEngagements()
-  }
+  }, [loadEngagements])
 
   return {
     engagements,
