@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Plus, Calendar, Target, Edit, Trash2, Eye, CheckCircle2, Clock, Loader2 } from "lucide-react"
+import { useState } from "react"
+import { Plus, Calendar, Target, Edit, Trash2, Eye, CheckCircle2, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -10,19 +10,57 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
-import { api } from "@/lib/api"
-import type { AnnualPlan } from "@/lib/api/types"
-import { useToast } from "@/hooks/use-toast"
+
+interface AnnualPlan {
+  id: number
+  year: string
+  title: string
+  description: string
+  status: "draft" | "approved" | "in-progress" | "completed"
+  totalEngagements: number
+  completedEngagements: number
+  riskBasedHours: number
+  actualHours: number
+  approvedBy: string
+  approvedDate: string
+  departments: string[]
+}
 
 export function AnnualPlansSection() {
-  const [plans, setPlans] = useState<AnnualPlan[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [plans, setPlans] = useState<AnnualPlan[]>([
+    {
+      id: 1,
+      year: "2025",
+      title: "الخطة السنوية للتدقيق الداخلي 2025",
+      description: "خطة تدقيق شاملة قائمة على المخاطر تغطي جميع الإدارات الحرجة",
+      status: "in-progress",
+      totalEngagements: 24,
+      completedEngagements: 8,
+      riskBasedHours: 2400,
+      actualHours: 850,
+      approvedBy: "لجنة التدقيق",
+      approvedDate: "2025-01-15",
+      departments: ["المالية", "المشتريات", "تقنية المعلومات", "الموارد البشرية", "العمليات"],
+    },
+    {
+      id: 2,
+      year: "2024",
+      title: "الخطة السنوية للتدقيق الداخلي 2024",
+      description: "خطة تدقيق سنوية مع التركيز على الضوابط المالية والتشغيلية",
+      status: "completed",
+      totalEngagements: 20,
+      completedEngagements: 20,
+      riskBasedHours: 2200,
+      actualHours: 2150,
+      approvedBy: "لجنة التدقيق",
+      approvedDate: "2024-01-10",
+      departments: ["المالية", "المشتريات", "العمليات"],
+    },
+  ])
+
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
   const [selectedPlan, setSelectedPlan] = useState<AnnualPlan | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const { toast } = useToast()
-
   const [formData, setFormData] = useState({
     year: "",
     title: "",
@@ -31,81 +69,24 @@ export function AnnualPlansSection() {
     riskBasedHours: "",
   })
 
-  useEffect(() => {
-    fetchPlans()
-  }, [])
-
-  const fetchPlans = async () => {
-    try {
-      setIsLoading(true)
-      const data = await api.annualPlans.getAll()
-      console.log("[v0] Fetched annual plans:", data.length)
-      setPlans(data)
-    } catch (error: any) {
-      console.error("[v0] Failed to fetch annual plans:", error)
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل تحميل الخطط السنوية",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+  const handleCreatePlan = () => {
+    const newPlan: AnnualPlan = {
+      id: plans.length + 1,
+      year: formData.year,
+      title: formData.title,
+      description: formData.description,
+      status: "draft",
+      totalEngagements: Number.parseInt(formData.totalEngagements),
+      completedEngagements: 0,
+      riskBasedHours: Number.parseInt(formData.riskBasedHours),
+      actualHours: 0,
+      approvedBy: "",
+      approvedDate: "",
+      departments: [],
     }
-  }
-
-  const handleCreatePlan = async () => {
-    try {
-      setIsSubmitting(true)
-      const newPlan = await api.annualPlans.create({
-        year: Number.parseInt(formData.year),
-        title: formData.title,
-        description: formData.description,
-        status: "draft",
-        total_engagements: Number.parseInt(formData.totalEngagements),
-        risk_based_hours: Number.parseInt(formData.riskBasedHours),
-      })
-
-      console.log("[v0] Created annual plan:", newPlan.id)
-      setPlans([newPlan, ...plans])
-      setShowCreateDialog(false)
-      setFormData({ year: "", title: "", description: "", totalEngagements: "", riskBasedHours: "" })
-
-      toast({
-        title: "تم بنجاح",
-        description: "تم إنشاء الخطة السنوية بنجاح",
-      })
-    } catch (error: any) {
-      console.error("[v0] Failed to create annual plan:", error)
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل إنشاء الخطة السنوية",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleDeletePlan = async (id: number) => {
-    if (!confirm("هل أنت متأكد من حذف هذه الخطة؟")) return
-
-    try {
-      await api.annualPlans.delete(id)
-      console.log("[v0] Deleted annual plan:", id)
-      setPlans(plans.filter((p) => p.id !== id))
-
-      toast({
-        title: "تم بنجاح",
-        description: "تم حذف الخطة السنوية بنجاح",
-      })
-    } catch (error: any) {
-      console.error("[v0] Failed to delete annual plan:", error)
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل حذف الخطة السنوية",
-        variant: "destructive",
-      })
-    }
+    setPlans([newPlan, ...plans])
+    setShowCreateDialog(false)
+    setFormData({ year: "", title: "", description: "", totalEngagements: "", riskBasedHours: "" })
   }
 
   const getStatusColor = (status: string) => {
@@ -136,14 +117,6 @@ export function AnnualPlansSection() {
       default:
         return status
     }
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-      </div>
-    )
   }
 
   return (
@@ -182,7 +155,7 @@ export function AnnualPlansSection() {
               <div>
                 <p className="text-sm text-slate-400">المهام المخططة</p>
                 <p className="text-3xl font-bold text-white">
-                  {plans.reduce((sum, plan) => sum + (plan.total_engagements || 0), 0)}
+                  {plans.reduce((sum, plan) => sum + plan.totalEngagements, 0)}
                 </p>
               </div>
               <Target className="h-10 w-10 text-cyan-400" />
@@ -195,7 +168,7 @@ export function AnnualPlansSection() {
               <div>
                 <p className="text-sm text-slate-400">المهام المكتملة</p>
                 <p className="text-3xl font-bold text-white">
-                  {plans.reduce((sum, plan) => sum + (plan.completed_engagements || 0), 0)}
+                  {plans.reduce((sum, plan) => sum + plan.completedEngagements, 0)}
                 </p>
               </div>
               <CheckCircle2 className="h-10 w-10 text-emerald-400" />
@@ -208,7 +181,7 @@ export function AnnualPlansSection() {
               <div>
                 <p className="text-sm text-slate-400">الساعات المخططة</p>
                 <p className="text-3xl font-bold text-white">
-                  {plans.reduce((sum, plan) => sum + (plan.risk_based_hours || 0), 0)}
+                  {plans.reduce((sum, plan) => sum + plan.riskBasedHours, 0)}
                 </p>
               </div>
               <Clock className="h-10 w-10 text-orange-400" />
@@ -229,6 +202,15 @@ export function AnnualPlansSection() {
                     <Badge className={getStatusColor(plan.status)}>{getStatusLabel(plan.status)}</Badge>
                   </div>
                   <p className="text-slate-400 text-sm mb-3">{plan.description}</p>
+                  {plan.departments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {plan.departments.map((dept, idx) => (
+                        <Badge key={idx} variant="outline" className="border-slate-600 text-slate-300">
+                          {dept}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -245,12 +227,7 @@ export function AnnualPlansSection() {
                   <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeletePlan(plan.id)}
-                    className="text-slate-400 hover:text-red-400"
-                  >
+                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -260,24 +237,22 @@ export function AnnualPlansSection() {
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">المهام</p>
                   <p className="text-lg font-semibold text-white">
-                    {plan.completed_engagements || 0} / {plan.total_engagements || 0}
+                    {plan.completedEngagements} / {plan.totalEngagements}
                   </p>
                 </div>
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">الساعات</p>
                   <p className="text-lg font-semibold text-white">
-                    {plan.actual_hours || 0} / {plan.risk_based_hours || 0}
+                    {plan.actualHours} / {plan.riskBasedHours}
                   </p>
                 </div>
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">معتمد من</p>
-                  <p className="text-lg font-semibold text-white">{plan.approved_by || "-"}</p>
+                  <p className="text-lg font-semibold text-white">{plan.approvedBy || "-"}</p>
                 </div>
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">تاريخ الاعتماد</p>
-                  <p className="text-lg font-semibold text-white">
-                    {plan.approved_date ? new Date(plan.approved_date).toLocaleDateString("ar-SA") : "-"}
-                  </p>
+                  <p className="text-lg font-semibold text-white">{plan.approvedDate || "-"}</p>
                 </div>
               </div>
 
@@ -285,18 +260,10 @@ export function AnnualPlansSection() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400">نسبة الإنجاز</span>
                   <span className="text-white font-medium">
-                    {plan.total_engagements
-                      ? Math.round(((plan.completed_engagements || 0) / plan.total_engagements) * 100)
-                      : 0}
-                    %
+                    {Math.round((plan.completedEngagements / plan.totalEngagements) * 100)}%
                   </span>
                 </div>
-                <Progress
-                  value={
-                    plan.total_engagements ? ((plan.completed_engagements || 0) / plan.total_engagements) * 100 : 0
-                  }
-                  className="h-2"
-                />
+                <Progress value={(plan.completedEngagements / plan.totalEngagements) * 100} className="h-2" />
               </div>
             </CardContent>
           </Card>
@@ -379,22 +346,13 @@ export function AnnualPlansSection() {
           <div className="flex gap-3 mt-6">
             <Button
               onClick={handleCreatePlan}
-              disabled={isSubmitting}
               className="flex-1 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                  جاري الإنشاء...
-                </>
-              ) : (
-                "إنشاء الخطة"
-              )}
+              إنشاء الخطة
             </Button>
             <Button
               variant="outline"
               onClick={() => setShowCreateDialog(false)}
-              disabled={isSubmitting}
               className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 bg-transparent"
             >
               إلغاء
@@ -430,32 +388,33 @@ export function AnnualPlansSection() {
                 <div className="space-y-2">
                   <p className="text-sm text-slate-400">المهام المكتملة</p>
                   <p className="text-xl font-semibold text-white">
-                    {selectedPlan.completed_engagements || 0} / {selectedPlan.total_engagements || 0}
+                    {selectedPlan.completedEngagements} / {selectedPlan.totalEngagements}
                   </p>
                   <Progress
-                    value={
-                      selectedPlan.total_engagements
-                        ? ((selectedPlan.completed_engagements || 0) / selectedPlan.total_engagements) * 100
-                        : 0
-                    }
+                    value={(selectedPlan.completedEngagements / selectedPlan.totalEngagements) * 100}
                     className="h-2"
                   />
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-slate-400">الساعات المستخدمة</p>
                   <p className="text-xl font-semibold text-white">
-                    {selectedPlan.actual_hours || 0} / {selectedPlan.risk_based_hours || 0}
+                    {selectedPlan.actualHours} / {selectedPlan.riskBasedHours}
                   </p>
-                  <Progress
-                    value={
-                      selectedPlan.risk_based_hours
-                        ? ((selectedPlan.actual_hours || 0) / selectedPlan.risk_based_hours) * 100
-                        : 0
-                    }
-                    className="h-2"
-                  />
+                  <Progress value={(selectedPlan.actualHours / selectedPlan.riskBasedHours) * 100} className="h-2" />
                 </div>
               </div>
+              {selectedPlan.departments.length > 0 && (
+                <div>
+                  <p className="text-sm text-slate-400 mb-2">الإدارات المشمولة</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPlan.departments.map((dept, idx) => (
+                      <Badge key={idx} variant="outline" className="border-slate-600 text-slate-300">
+                        {dept}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

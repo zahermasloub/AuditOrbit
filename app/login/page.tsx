@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { api } from "@/lib/api"
+import { authApi } from "@/lib/api"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -24,19 +24,20 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      const response = await api.auth.login({ email, password })
+      const response = await authApi.login(email, password)
 
-      console.log("[v0] Login successful:", response.user.email, response.user.role)
-
-      // Store token and user info
-      localStorage.setItem("auth_token", response.access_token)
+      // Store tokens in localStorage
+      localStorage.setItem("access_token", response.access_token)
+      localStorage.setItem("refresh_token", response.refresh_token)
       localStorage.setItem("user", JSON.stringify(response.user))
+
+      console.log("[v0] Login successful:", response.user)
 
       // Redirect to dashboard
       window.location.href = "/dashboard"
     } catch (err: any) {
-      console.error("[v0] Login failed:", err)
-      setError(err.message || "فشل تسجيل الدخول. يرجى التحقق من البيانات المدخلة.")
+      console.error("[v0] Login error:", err)
+      setError(err.message || "فشل تسجيل الدخول. يرجى التحقق من البيانات والمحاولة مرة أخرى.")
     } finally {
       setIsLoading(false)
     }

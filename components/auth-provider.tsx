@@ -4,6 +4,7 @@ import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { authApi } from "@/lib/api"
 import type { User } from "@/lib/api/types"
 
 interface AuthContextType {
@@ -24,28 +25,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is logged in
-    const token = localStorage.getItem("auth_token")
-    const userStr = localStorage.getItem("user")
+    // Check if user is logged in on mount
+    const storedUser = localStorage.getItem("user")
+    const token = localStorage.getItem("access_token")
 
-    if (token && userStr) {
+    if (storedUser && token) {
       try {
-        setUser(JSON.parse(userStr))
-      } catch (err) {
-        console.error("[v0] Failed to parse user data:", err)
-        localStorage.removeItem("auth_token")
+        setUser(JSON.parse(storedUser))
+      } catch (error) {
+        console.error("[v0] Failed to parse stored user:", error)
         localStorage.removeItem("user")
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("refresh_token")
       }
     }
 
     setIsLoading(false)
   }, [])
 
-  const logout = () => {
-    localStorage.removeItem("auth_token")
-    localStorage.removeItem("user")
-    setUser(null)
-    router.push("/login")
+  const logout = async () => {
+    try {
+      await authApi.logout()
+    } catch (error) {
+      console.error("[v0] Logout error:", error)
+    } finally {
+      // Clear local storage
+      localStorage.removeItem("user")
+      localStorage.removeItem("access_token")
+      localStorage.removeItem("refresh_token")
+      setUser(null)
+      router.push("/login")
+    }
   }
 
   return <AuthContext.Provider value={{ user, isLoading, logout }}>{children}</AuthContext.Provider>

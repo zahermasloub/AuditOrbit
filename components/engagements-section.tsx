@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import {
   Plus,
   FileText,
@@ -14,7 +14,6 @@ import {
   CheckCircle2,
   Clock,
   Building2,
-  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -26,19 +25,87 @@ import { Textarea } from "@/components/ui/textarea"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { api } from "@/lib/api"
-import type { Engagement } from "@/lib/api/types"
-import { useToast } from "@/hooks/use-toast"
+
+interface Engagement {
+  id: number
+  title: string
+  description: string
+  department: string
+  status: "planning" | "fieldwork" | "reporting" | "follow-up" | "completed"
+  priority: "critical" | "high" | "medium" | "low"
+  progress: number
+  startDate: string
+  endDate: string
+  assignedAuditors: string[]
+  objectives: string[]
+  scope: string
+  criteria: string
+  estimatedHours: number
+  actualHours: number
+  riskLevel: "high" | "medium" | "low"
+}
 
 export function EngagementsSection() {
-  const [engagements, setEngagements] = useState<Engagement[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [engagements, setEngagements] = useState<Engagement[]>([
+    {
+      id: 1,
+      title: "تدقيق نظام المشتريات",
+      description: "مراجعة شاملة لعمليات المشتريات والضوابط الداخلية",
+      department: "المشتريات",
+      status: "fieldwork",
+      priority: "high",
+      progress: 65,
+      startDate: "2025-01-15",
+      endDate: "2025-02-15",
+      assignedAuditors: ["أحمد محمد", "سارة علي"],
+      objectives: ["تقييم فعالية ضوابط المشتريات", "التحقق من الامتثال للسياسات", "تقييم كفاءة العمليات"],
+      scope: "جميع عمليات المشتريات للربع الأخير من 2024",
+      criteria: "سياسات المشتريات الداخلية، معايير ISO 9001",
+      estimatedHours: 120,
+      actualHours: 78,
+      riskLevel: "high",
+    },
+    {
+      id: 2,
+      title: "مراجعة الضوابط المالية",
+      description: "تدقيق الضوابط المالية والمحاسبية",
+      department: "المالية",
+      status: "planning",
+      priority: "medium",
+      progress: 30,
+      startDate: "2025-02-01",
+      endDate: "2025-03-01",
+      assignedAuditors: ["محمد خالد"],
+      objectives: ["تقييم الضوابط المالية", "مراجعة التقارير المالية"],
+      scope: "العمليات المالية للسنة المالية 2024",
+      criteria: "المعايير المحاسبية الدولية، السياسات المالية الداخلية",
+      estimatedHours: 100,
+      actualHours: 30,
+      riskLevel: "high",
+    },
+    {
+      id: 3,
+      title: "تدقيق أمن المعلومات",
+      description: "تقييم أمن البنية التحتية لتقنية المعلومات",
+      department: "تقنية المعلومات",
+      status: "reporting",
+      priority: "critical",
+      progress: 90,
+      startDate: "2025-01-01",
+      endDate: "2025-01-30",
+      assignedAuditors: ["فاطمة حسن", "عمر يوسف"],
+      objectives: ["تقييم الضوابط الأمنية", "اختبار الاختراق", "مراجعة السياسات"],
+      scope: "جميع أنظمة تقنية المعلومات والشبكات",
+      criteria: "ISO 27001، NIST Cybersecurity Framework",
+      estimatedHours: 150,
+      actualHours: 135,
+      riskLevel: "high",
+    },
+  ])
+
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
   const [selectedEngagement, setSelectedEngagement] = useState<Engagement | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const { toast } = useToast()
-
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -52,97 +119,39 @@ export function EngagementsSection() {
     criteria: "",
   })
 
-  useEffect(() => {
-    fetchEngagements()
-  }, [])
-
-  const fetchEngagements = async () => {
-    try {
-      setIsLoading(true)
-      const response = await api.engagements.list()
-      console.log("[v0] Fetched engagements:", response.items.length)
-      setEngagements(response.items)
-    } catch (error: any) {
-      console.error("[v0] Failed to fetch engagements:", error)
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل تحميل المهام التدقيقية",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+  const handleCreateEngagement = () => {
+    const newEngagement: Engagement = {
+      id: engagements.length + 1,
+      title: formData.title,
+      description: formData.description,
+      department: formData.department,
+      status: "planning",
+      priority: formData.priority as "critical" | "high" | "medium" | "low",
+      progress: 0,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      assignedAuditors: [],
+      objectives: formData.objectives.split("\n").filter((o) => o.trim()),
+      scope: formData.scope,
+      criteria: formData.criteria,
+      estimatedHours: Number.parseInt(formData.estimatedHours),
+      actualHours: 0,
+      riskLevel: "medium",
     }
-  }
-
-  const handleCreateEngagement = async () => {
-    try {
-      setIsSubmitting(true)
-      const newEngagement = await api.engagements.create({
-        title: formData.title,
-        description: formData.description,
-        department: formData.department,
-        status: "planning",
-        priority: formData.priority as "critical" | "high" | "medium" | "low",
-        start_date: formData.startDate,
-        end_date: formData.endDate,
-        estimated_hours: Number.parseInt(formData.estimatedHours),
-        objectives: formData.objectives.split("\n").filter((o) => o.trim()),
-        scope: formData.scope,
-        criteria: formData.criteria,
-      })
-
-      console.log("[v0] Created engagement:", newEngagement.id)
-      setEngagements([newEngagement, ...engagements])
-      setShowCreateDialog(false)
-      setFormData({
-        title: "",
-        description: "",
-        department: "",
-        priority: "medium",
-        startDate: "",
-        endDate: "",
-        estimatedHours: "",
-        objectives: "",
-        scope: "",
-        criteria: "",
-      })
-
-      toast({
-        title: "تم بنجاح",
-        description: "تم إنشاء المهمة التدقيقية بنجاح",
-      })
-    } catch (error: any) {
-      console.error("[v0] Failed to create engagement:", error)
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل إنشاء المهمة التدقيقية",
-        variant: "destructive",
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const handleDeleteEngagement = async (id: number) => {
-    if (!confirm("هل أنت متأكد من حذف هذه المهمة؟")) return
-
-    try {
-      await api.engagements.delete(id.toString())
-      console.log("[v0] Deleted engagement:", id)
-      setEngagements(engagements.filter((e) => e.id !== id))
-
-      toast({
-        title: "تم بنجاح",
-        description: "تم حذف المهمة التدقيقية بنجاح",
-      })
-    } catch (error: any) {
-      console.error("[v0] Failed to delete engagement:", error)
-      toast({
-        title: "خطأ",
-        description: error.message || "فشل حذف المهمة التدقيقية",
-        variant: "destructive",
-      })
-    }
+    setEngagements([newEngagement, ...engagements])
+    setShowCreateDialog(false)
+    setFormData({
+      title: "",
+      description: "",
+      department: "",
+      priority: "medium",
+      startDate: "",
+      endDate: "",
+      estimatedHours: "",
+      objectives: "",
+      scope: "",
+      criteria: "",
+    })
   }
 
   const getStatusColor = (status: string) => {
@@ -215,14 +224,6 @@ export function EngagementsSection() {
     reporting: engagements.filter((e) => e.status === "reporting").length,
     followUp: engagements.filter((e) => e.status === "follow-up").length,
     completed: engagements.filter((e) => e.status === "completed").length,
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-      </div>
-    )
   }
 
   return (
@@ -335,12 +336,12 @@ export function EngagementsSection() {
                     </div>
                     <div className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      <span>{engagement.assigned_auditors?.length || 0} مدقق</span>
+                      <span>{engagement.assignedAuditors.length} مدقق</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
                       <span>
-                        {engagement.start_date} - {engagement.end_date}
+                        {engagement.startDate} - {engagement.endDate}
                       </span>
                     </div>
                   </div>
@@ -360,12 +361,7 @@ export function EngagementsSection() {
                   <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteEngagement(engagement.id)}
-                    className="text-slate-400 hover:text-red-400"
-                  >
+                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -375,36 +371,36 @@ export function EngagementsSection() {
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">الساعات</p>
                   <p className="text-lg font-semibold text-white">
-                    {engagement.actual_hours || 0} / {engagement.estimated_hours || 0}
+                    {engagement.actualHours} / {engagement.estimatedHours}
                   </p>
                 </div>
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">مستوى المخاطر</p>
                   <Badge
-                    variant={engagement.risk_level === "high" ? "destructive" : "secondary"}
+                    variant={engagement.riskLevel === "high" ? "destructive" : "secondary"}
                     className={
-                      engagement.risk_level === "medium"
+                      engagement.riskLevel === "medium"
                         ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
-                        : engagement.risk_level === "low"
+                        : engagement.riskLevel === "low"
                           ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                           : ""
                     }
                   >
-                    {engagement.risk_level === "high" ? "عالي" : engagement.risk_level === "medium" ? "متوسط" : "منخفض"}
+                    {engagement.riskLevel === "high" ? "عالي" : engagement.riskLevel === "medium" ? "متوسط" : "منخفض"}
                   </Badge>
                 </div>
                 <div className="p-3 bg-slate-800/50 rounded-lg">
                   <p className="text-xs text-slate-400 mb-1">الأهداف</p>
-                  <p className="text-lg font-semibold text-white">{engagement.objectives?.length || 0}</p>
+                  <p className="text-lg font-semibold text-white">{engagement.objectives.length}</p>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-400">التقدم</span>
-                  <span className="text-white font-medium">{engagement.progress || 0}%</span>
+                  <span className="text-white font-medium">{engagement.progress}%</span>
                 </div>
-                <Progress value={engagement.progress || 0} className="h-2" />
+                <Progress value={engagement.progress} className="h-2" />
               </div>
             </CardContent>
           </Card>
@@ -565,22 +561,13 @@ export function EngagementsSection() {
           <div className="flex gap-3 mt-6">
             <Button
               onClick={handleCreateEngagement}
-              disabled={isSubmitting}
               className="flex-1 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 ml-2 animate-spin" />
-                  جاري الإنشاء...
-                </>
-              ) : (
-                "إنشاء المهمة"
-              )}
+              إنشاء المهمة
             </Button>
             <Button
               variant="outline"
               onClick={() => setShowCreateDialog(false)}
-              disabled={isSubmitting}
               className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 bg-transparent"
             >
               إلغاء
@@ -633,31 +620,31 @@ export function EngagementsSection() {
                 </div>
                 <div className="space-y-2">
                   <p className="text-sm text-slate-400">التقدم</p>
-                  <Progress value={selectedEngagement.progress || 0} className="h-3" />
-                  <p className="text-right text-sm text-white font-medium">{selectedEngagement.progress || 0}%</p>
+                  <Progress value={selectedEngagement.progress} className="h-3" />
+                  <p className="text-right text-sm text-white font-medium">{selectedEngagement.progress}%</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-slate-400 mb-1">الساعات المستخدمة</p>
                     <p className="text-xl font-semibold text-white">
-                      {selectedEngagement.actual_hours || 0} / {selectedEngagement.estimated_hours || 0}
+                      {selectedEngagement.actualHours} / {selectedEngagement.estimatedHours}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-slate-400 mb-1">مستوى المخاطر</p>
                     <Badge
-                      variant={selectedEngagement.risk_level === "high" ? "destructive" : "secondary"}
+                      variant={selectedEngagement.riskLevel === "high" ? "destructive" : "secondary"}
                       className={
-                        selectedEngagement.risk_level === "medium"
+                        selectedEngagement.riskLevel === "medium"
                           ? "bg-orange-500/20 text-orange-300 border-orange-500/30"
-                          : selectedEngagement.risk_level === "low"
+                          : selectedEngagement.riskLevel === "low"
                             ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
                             : ""
                       }
                     >
-                      {selectedEngagement.risk_level === "high"
+                      {selectedEngagement.riskLevel === "high"
                         ? "عالي"
-                        : selectedEngagement.risk_level === "medium"
+                        : selectedEngagement.riskLevel === "medium"
                           ? "متوسط"
                           : "منخفض"}
                     </Badge>
@@ -668,7 +655,7 @@ export function EngagementsSection() {
                 <div>
                   <h4 className="text-lg font-semibold text-white mb-2">الأهداف</h4>
                   <ul className="space-y-2">
-                    {selectedEngagement.objectives?.map((obj, idx) => (
+                    {selectedEngagement.objectives.map((obj, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-slate-300">
                         <Target className="h-4 w-4 text-indigo-400 mt-1 flex-shrink-0" />
                         <span>{obj}</span>
@@ -689,7 +676,7 @@ export function EngagementsSection() {
                 <div>
                   <h4 className="text-lg font-semibold text-white mb-3">المدققون المعينون</h4>
                   <div className="space-y-2">
-                    {selectedEngagement.assigned_auditors?.map((auditor, idx) => (
+                    {selectedEngagement.assignedAuditors.map((auditor, idx) => (
                       <div key={idx} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg">
                         <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
                           {auditor.charAt(0)}
