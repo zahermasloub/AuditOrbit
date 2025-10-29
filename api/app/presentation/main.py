@@ -24,6 +24,7 @@ from .routers import (
   followups,
   manager,
   notifications,
+  ops,
   reports,
   samples,
   roles,
@@ -88,6 +89,7 @@ app.include_router(reports.router, prefix="/reports", tags=["reports"])
 app.include_router(manager.router, prefix="/manager", tags=["manager"])
 app.include_router(auditor.router, prefix="/auditor", tags=["auditor"])
 app.include_router(notifications.router, tags=["notifications"])
+app.include_router(ops.router, tags=["ops"])
 app.include_router(wp.router)
 app.include_router(samples.router)
 app.include_router(followups.router)

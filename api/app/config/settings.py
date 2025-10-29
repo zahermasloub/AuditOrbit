@@ -4,14 +4,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
   model_config = SettingsConfigDict(
     env_file=".env",
-    extra="ignore"  # Ignore extra fields from .env file
+    env_file_encoding="utf-8",
+    extra="ignore",  # Ignore extra fields from .env file
+    case_sensitive=False
   )
 
-  DATABASE_URL: str = "postgresql+psycopg://audit:auditpw@localhost:5432/auditdb"
+  DATABASE_URL: str
   JWT_SECRET: str = "devsecret"
-  REDIS_URL: str = "redis://localhost:6379/0"
-  S3_ENDPOINT: str = "http://localhost:9000"
+  REDIS_URL: str
+  S3_ENDPOINT: str
   S3_BUCKET: str = "auditevidence"
+  S3_ACCESS_KEY: str = "auditorbit"
+  S3_SECRET_KEY: str = "auditorbit123"
   
   # Add fields used in .env to avoid validation errors
   WEB_ORIGIN: str = "http://localhost:3000"
