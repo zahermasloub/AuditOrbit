@@ -11,6 +11,7 @@ from .middlewares.rate_limit import limiter
 from .middlewares.security import SecurityHeadersMiddleware
 from ..infrastructure.exception_handlers import setup_exception_handlers
 from .routers import (
+  admin,
   ai,
   audit,
   auditor,
@@ -76,6 +77,7 @@ async def rate_limit_handler(request: Request, exc) -> JSONResponse:  # type: ig
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(users.router, prefix="/users", tags=["users"])
 app.include_router(roles.router, prefix="/roles", tags=["roles"])
+app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(engagements.router, prefix="/engagements", tags=["engagements"])
 app.include_router(checklists.router, prefix="/checklists", tags=["checklists"])

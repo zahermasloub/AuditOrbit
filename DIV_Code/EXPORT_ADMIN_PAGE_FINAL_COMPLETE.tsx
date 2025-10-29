@@ -119,20 +119,6 @@ import {
 } from "recharts"
 
 // ============================================================================
-// 🔗 CUSTOM HOOKS IMPORT
-// ============================================================================
-import {
-  useAdminKPIs,
-  useEngagementsTrend,
-  useUserActivity,
-  useRecentActivities,
-  useFindingsBySeverity,
-  useUsersList,
-  useRolesList,
-  useAuditLogs,
-} from "@/hooks/use-admin"
-
-// ============================================================================
 // 🎨 MAIN COMPONENT
 // ============================================================================
 
@@ -150,21 +136,7 @@ export default function AdminPage() {
   const [showRoleDialog, setShowRoleDialog] = useState(false)
 
   // ============================================================================
-  // � DATA FETCHING - React Query Hooks
-  // ============================================================================
-  
-  // Fetch data from API using custom hooks with fallback to mock data
-  const { data: apiKpis } = useAdminKPIs()
-  const { data: apiEngagementsTrend } = useEngagementsTrend()
-  const { data: apiUserActivity } = useUserActivity()
-  const { data: apiRecentActivities } = useRecentActivities(5)
-  const { data: apiFindingsBySeverity } = useFindingsBySeverity()
-  const { data: apiUsersData } = useUsersList(1, 20)
-  const { data: apiRoles } = useRolesList()
-  const { data: apiAuditLogsData } = useAuditLogs(1, 20)
-
-  // ============================================================================
-  // �🗂️ MENU CONFIGURATION
+  // 🗂️ MENU CONFIGURATION
   // ============================================================================
 
   const menuItems = [
@@ -182,8 +154,7 @@ export default function AdminPage() {
   // ============================================================================
   // ملاحظة: استبدل هذه البيانات بـ API calls حقيقية في التطبيق الفعلي
 
-  // Use API data if available and valid, otherwise use mock data
-  const kpis = (apiKpis && apiKpis.total_engagements > 0) ? apiKpis : {
+  const kpis = {
     total_engagements: 48, // إجمالي المهام
     completed_engagements: 23, // المهام المكتملة
     completion_rate: 47.92, // معدل الإنجاز (%)
@@ -200,8 +171,8 @@ export default function AdminPage() {
   // 📊 MOCK DATA - CHARTS DATA
   // ============================================================================
 
-  // بيانات اتجاه المهام (Line Chart) - use API or fallback to mock
-  const engagementsTrend = (apiEngagementsTrend && apiEngagementsTrend.length > 0) ? apiEngagementsTrend : [
+  // بيانات اتجاه المهام (Line Chart)
+  const engagementsTrend = [
     { period: "يناير", total: 8, completed: 6 },
     { period: "فبراير", total: 10, completed: 7 },
     { period: "مارس", total: 12, completed: 9 },
@@ -210,16 +181,16 @@ export default function AdminPage() {
     { period: "يونيو", total: 13, completed: 11 },
   ]
 
-  // بيانات النتائج حسب الخطورة (Pie Chart) - use API or fallback to mock
-  const findingsBySeverity = (apiFindingsBySeverity && apiFindingsBySeverity.length > 0) ? apiFindingsBySeverity : [
+  // بيانات النتائج حسب الخطورة (Pie Chart)
+  const findingsBySeverity = [
     { name: "حرج", value: 5, color: "#EF4444" }, // Critical - Red
     { name: "عالي", value: 12, color: "#F97316" }, // High - Orange
     { name: "متوسط", value: 18, color: "#F59E0B" }, // Medium - Amber
     { name: "منخفض", value: 8, color: "#10B981" }, // Low - Green
   ]
 
-  // بيانات نشاط المستخدمين (Bar Chart) - use API or fallback to mock
-  const userActivityData = (apiUserActivity && apiUserActivity.length > 0) ? apiUserActivity : [
+  // بيانات نشاط المستخدمين (Bar Chart)
+  const userActivityData = [
     { day: "السبت", logins: 45, actions: 234 },
     { day: "الأحد", logins: 52, actions: 289 },
     { day: "الاثنين", logins: 48, actions: 267 },
@@ -233,44 +204,7 @@ export default function AdminPage() {
   // 🔔 MOCK DATA - ACTIVITY FEED
   // ============================================================================
 
-  // Helper function to get activity icon
-  const getActivityIcon = (resourceType: string) => {
-    switch (resourceType?.toLowerCase()) {
-      case "user":
-        return UserPlus
-      case "role":
-        return ShieldCheck
-      case "report":
-        return FileCheck
-      case "finding":
-        return AlertCircle
-      default:
-        return FileText
-    }
-  }
-
-  const getActivityColor = (resourceType: string) => {
-    switch (resourceType?.toLowerCase()) {
-      case "user":
-        return "text-green-400"
-      case "role":
-        return "text-blue-400"
-      case "report":
-        return "text-purple-400"
-      case "finding":
-        return "text-red-400"
-      default:
-        return "text-cyan-400"
-    }
-  }
-
-  const activities = (apiRecentActivities && apiRecentActivities.length > 0) 
-    ? apiRecentActivities.map((activity) => ({
-        ...activity,
-        icon: getActivityIcon(activity.resource_type),
-        color: getActivityColor(activity.resource_type),
-      }))
-    : [
+  const activities = [
     {
       id: "1",
       action: "إنشاء مستخدم جديد",
@@ -322,7 +256,7 @@ export default function AdminPage() {
   // 👥 MOCK DATA - USERS
   // ============================================================================
 
-  const users = (apiUsersData?.items && apiUsersData.items.length > 0) ? apiUsersData.items : [
+  const users = [
     {
       id: "1",
       name: "أحمد محمد السعيد",
@@ -379,7 +313,7 @@ export default function AdminPage() {
   // 🛡️ MOCK DATA - ROLES
   // ============================================================================
 
-  const roles = (apiRoles && apiRoles.length > 0) ? apiRoles : [
+  const roles = [
     {
       id: "1",
       name: "مدير النظام",
@@ -426,7 +360,7 @@ export default function AdminPage() {
   // 📝 MOCK DATA - AUDIT LOGS
   // ============================================================================
 
-  const auditLogs = (apiAuditLogsData?.items && apiAuditLogsData.items.length > 0) ? apiAuditLogsData.items : [
+  const auditLogs = [
     {
       id: "1",
       timestamp: "2025-01-29 10:30:15",
@@ -818,12 +752,12 @@ export default function AdminPage() {
                           cx="50%"
                           cy="50%"
                           labelLine={false}
-                          label={({ name, percent }: any) => `${name} ${((percent as number) * 100).toFixed(0)}%`}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                           outerRadius={100}
                           fill="#8884d8"
                           dataKey="value"
                         >
-                          {findingsBySeverity.map((entry: any, index: number) => (
+                          {findingsBySeverity.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
@@ -863,7 +797,7 @@ export default function AdminPage() {
                             <p className="text-sm text-white font-medium">{activity.action}</p>
                             <p className="text-xs text-slate-400 mt-1">بواسطة {activity.user_name}</p>
                             <p className="text-xs text-slate-500 mt-1">
-                              {activity.created_at}
+                              {new Date(activity.created_at).toLocaleString("ar-SA")}
                             </p>
                           </div>
                         </div>
