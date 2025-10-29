@@ -331,6 +331,15 @@ export default function DashboardPage() {
               >
                 Auditor
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 hover:text-indigo-300 hover:border-indigo-400/50 bg-indigo-500/5 transition-all duration-200 font-medium"
+                onClick={() => window.location.href = '/ops'}
+              >
+                <Settings className="h-4 w-4 ml-2" />
+                مدير النظام
+              </Button>
               <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
                 <Bell className="h-5 w-5" />
               </Button>

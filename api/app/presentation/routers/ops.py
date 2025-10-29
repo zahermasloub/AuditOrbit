@@ -70,21 +70,33 @@ def _format_dt(value: datetime | None) -> str:
     return value.astimezone(timezone.utc).isoformat() if value else "-"
 
 
-def _collect_jobs(queue: Queue, job_ids: Iterable[str], status: str) -> list[dict[str, Any]]:
+def _collect_jobs(queue: Queue, job_ids: Iterable[str | bytes], status: str) -> list[dict[str, Any]]:
     jobs: list[dict[str, Any]] = []
-    for job_id in job_ids:
-        job = queue.fetch_job(job_id)
-        if not job:
+    for job_id_raw in job_ids:
+        # Handle both string and bytes job IDs
+        job_id: str = job_id_raw.decode("utf-8") if isinstance(job_id_raw, bytes) else str(job_id_raw)
+        
+        try:
+            job = queue.fetch_job(job_id)
+            if not job:
+                continue
+            
+            # Handle potentially binary values
+            job_id_str = job.id.decode("utf-8") if isinstance(job.id, bytes) else job.id
+            func_name = job.func_name.decode("utf-8") if isinstance(job.func_name, bytes) else job.func_name
+            
+            jobs.append(
+                {
+                    "id": job_id_str,
+                    "status": status,
+                    "type": func_name.split(".")[-1] if func_name else "task",
+                    "started": _format_dt(job.started_at),
+                    "finished": _format_dt(job.ended_at),
+                }
+            )
+        except Exception:  # pragma: no cover - defensive
+            # Skip jobs that fail to decode or fetch
             continue
-        jobs.append(
-            {
-                "id": job.id,
-                "status": status,
-                "type": job.func_name.split(".")[-1] if job.func_name else "task",
-                "started": _format_dt(job.started_at),
-                "finished": _format_dt(job.ended_at),
-            }
-        )
     return jobs
 
 
@@ -199,7 +211,7 @@ async def storage_status() -> dict[str, Any]:
 @router.get("/ops/ai-status", tags=["ops"])
 async def ai_status() -> dict[str, Any]:
     try:
-        redis_client = _get_redis_client()
+        redis_client = _get_redis_client(decode_responses=False)
         queue = Queue(os.getenv("AI_QUEUE", "ai-tasks"), connection=redis_client)
     except Exception as exc:  # pragma: no cover - defensive branch
         _remember_log("error", f"تعذّر الاتصال بطابور الذكاء الاصطناعي: {exc}")
