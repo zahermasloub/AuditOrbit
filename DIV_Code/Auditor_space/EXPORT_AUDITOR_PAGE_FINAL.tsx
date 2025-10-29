@@ -797,7 +797,7 @@ export default function AuditorPage() {
                         <p className="text-slate-400 text-sm">وقت البحث: 487 ms</p>
                       </div>
 
-                      {complianceResults.map((result) => (
+                      {complianceResults.map((result, idx) => (
                         <div
                           key={result.id}
                           className="p-6 bg-slate-800/50 border border-slate-700 rounded-lg hover:border-indigo-500/30 transition-colors"

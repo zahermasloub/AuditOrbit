@@ -2,10 +2,12 @@ import * as React from "react";
 
 export function Badge({ 
   children, 
-  color = "muted" 
+  color = "muted",
+  className = ""
 }: { 
   children: React.ReactNode; 
-  color?: "muted" | "success" | "warning" | "danger" | "accent"
+  color?: "muted" | "success" | "warning" | "danger" | "accent";
+  className?: string;
 }) {
   const colorMap: Record<string, string> = {
     muted: "bg-[rgb(var(--muted))]/10 text-[rgb(var(--muted))]",
@@ -16,7 +18,7 @@ export function Badge({
   };
 
   return (
-    <span className={`inline-flex items-center rounded-xl px-2 py-0.5 text-xs font-medium ${colorMap[color]}`}>
+    <span className={`inline-flex items-center rounded-xl px-2 py-0.5 text-xs font-medium ${colorMap[color]} ${className}`}>
       {children}
     </span>
   );
