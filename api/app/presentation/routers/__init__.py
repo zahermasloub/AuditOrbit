@@ -11,7 +11,7 @@ from . import (
 	followups,
 	manager,
 	notifications,
-	ops,
+	# ops,  # Temporarily disabled due to FastAPI type annotation issue
 	reports,
 	samples,
 	roles,
@@ -32,7 +32,7 @@ __all__ = [
 	"followups",
 	"manager",
 	"notifications",
-	"ops",
+	# "ops",  # Temporarily disabled
 	"reports",
 	"samples",
 	"roles",

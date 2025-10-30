@@ -100,7 +100,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Bar,
@@ -130,6 +129,7 @@ import {
   useUsersList,
   useRolesList,
   useAuditLogs,
+  useCreateUser,
 } from "@/hooks/use-admin"
 
 // ============================================================================
@@ -148,6 +148,14 @@ export default function AdminPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [showUserDialog, setShowUserDialog] = useState(false)
   const [showRoleDialog, setShowRoleDialog] = useState(false)
+  
+  // Form state for new user
+  const [newUserData, setNewUserData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "User",
+  })
 
   // ============================================================================
   // � DATA FETCHING - React Query Hooks
@@ -159,9 +167,12 @@ export default function AdminPage() {
   const { data: apiUserActivity } = useUserActivity()
   const { data: apiRecentActivities } = useRecentActivities(5)
   const { data: apiFindingsBySeverity } = useFindingsBySeverity()
-  const { data: apiUsersData } = useUsersList(1, 20)
+  const { data: apiUsersData, refetch: refetchUsers } = useUsersList(1, 20)
   const { data: apiRoles } = useRolesList()
   const { data: apiAuditLogsData } = useAuditLogs(1, 20)
+  
+  // Create user mutation
+  const createUserMutation = useCreateUser()
 
   // ============================================================================
   // �🗂️ MENU CONFIGURATION
@@ -319,61 +330,10 @@ export default function AdminPage() {
   ]
 
   // ============================================================================
-  // 👥 MOCK DATA - USERS
+  // 👥 USERS DATA - From API only (no mock data)
   // ============================================================================
 
-  const users = (apiUsersData?.items && apiUsersData.items.length > 0) ? apiUsersData.items : [
-    {
-      id: "1",
-      name: "أحمد محمد السعيد",
-      email: "ahmed.mohammed@audit.com",
-      role: "مدير تدقيق",
-      status: "نشط",
-      last_login: "2025-01-29 10:30",
-      engagements: 12,
-      avatar: "A",
-    },
-    {
-      id: "2",
-      name: "سارة أحمد الخالدي",
-      email: "sara.ahmed@audit.com",
-      role: "مدقق أول",
-      status: "نشط",
-      last_login: "2025-01-29 09:15",
-      engagements: 8,
-      avatar: "س",
-    },
-    {
-      id: "3",
-      name: "محمد علي الحربي",
-      email: "mohammed.ali@audit.com",
-      role: "مدقق",
-      status: "نشط",
-      last_login: "2025-01-29 08:45",
-      engagements: 6,
-      avatar: "م",
-    },
-    {
-      id: "4",
-      name: "فاطمة حسن العتيبي",
-      email: "fatima.hassan@audit.com",
-      role: "مدقق",
-      status: "معلق",
-      last_login: "2025-01-28 16:20",
-      engagements: 5,
-      avatar: "ف",
-    },
-    {
-      id: "5",
-      name: "خالد عبدالله القحطاني",
-      email: "khaled.abdullah@audit.com",
-      role: "مراجع",
-      status: "نشط",
-      last_login: "2025-01-28 14:10",
-      engagements: 3,
-      avatar: "خ",
-    },
-  ]
+  const users = apiUsersData?.items || []
 
   // ============================================================================
   // 🛡️ MOCK DATA - ROLES
@@ -494,6 +454,24 @@ export default function AdminPage() {
       setSelectedUsers([])
     } else {
       setSelectedUsers(users.map((u) => u.id))
+    }
+  }
+  
+  // معالج إنشاء مستخدم جديد
+  const handleCreateUser = async () => {
+    if (!newUserData.name || !newUserData.email || !newUserData.password) {
+      alert("الرجاء ملء جميع الحقول المطلوبة")
+      return
+    }
+    
+    try {
+      await createUserMutation.mutateAsync(newUserData)
+      setShowUserDialog(false)
+      setNewUserData({ name: "", email: "", password: "", role: "User" })
+      refetchUsers()
+      alert("تم إنشاء المستخدم بنجاح")
+    } catch (error) {
+      alert(`خطأ: ${error instanceof Error ? error.message : "فشل في إنشاء المستخدم"}`)
     }
   }
 
@@ -981,88 +959,92 @@ export default function AdminPage() {
                         <TableHead className="text-slate-400">المستخدم</TableHead>
                         <TableHead className="text-slate-400">الدور</TableHead>
                         <TableHead className="text-slate-400">الحالة</TableHead>
-                        <TableHead className="text-slate-400">آخر تسجيل دخول</TableHead>
-                        <TableHead className="text-slate-400">المهام</TableHead>
+                        <TableHead className="text-slate-400">تاريخ الإنشاء</TableHead>
                         <TableHead className="text-slate-400 text-left">الإجراءات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {users.map((user) => (
-                        <TableRow key={user.id} className="border-slate-800 hover:bg-slate-800/50">
-                          <TableCell>
-                            <Checkbox
-                              checked={selectedUsers.includes(user.id)}
-                              onCheckedChange={() => handleSelectUser(user.id)}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
-                                {user.avatar}
-                              </div>
-                              <div>
-                                <p className="text-white font-medium">{user.name}</p>
-                                <p className="text-slate-400 text-sm">{user.email}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-500/10">
-                              {user.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={user.status === "نشط" ? "default" : "secondary"}
-                              className={
-                                user.status === "نشط"
-                                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                                  : "bg-slate-700 text-slate-300 border-slate-600"
-                              }
-                            >
-                              {user.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-slate-400 text-sm">{user.last_login}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="border-cyan-500/30 text-cyan-300 bg-cyan-500/10">
-                              {user.engagements} مهمة
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-left">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="text-slate-400 hover:text-white hover:bg-slate-800"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800">
-                                <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
-                                  <Eye className="h-4 w-4 ml-2" />
-                                  عرض التفاصيل
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
-                                  <Edit className="h-4 w-4 ml-2" />
-                                  تعديل
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
-                                  <Shield className="h-4 w-4 ml-2" />
-                                  تغيير الصلاحيات
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator className="bg-slate-800" />
-                                <DropdownMenuItem className="text-red-400 focus:bg-red-500/10 focus:text-red-300">
-                                  <Trash2 className="h-4 w-4 ml-2" />
-                                  حذف
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                      {users.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-slate-400 py-8">
+                            لا توجد مستخدمين حالياً
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        users.map((user) => (
+                          <TableRow key={user.id} className="border-slate-800 hover:bg-slate-800/50">
+                            <TableCell>
+                              <Checkbox
+                                checked={selectedUsers.includes(user.id)}
+                                onCheckedChange={() => handleSelectUser(user.id)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-white font-medium">{user.name}</p>
+                                  <p className="text-slate-400 text-sm">{user.email}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-500/10">
+                                {user.role || "User"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={user.active !== false ? "default" : "secondary"}
+                                className={
+                                  user.active !== false
+                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                                    : "bg-slate-700 text-slate-300 border-slate-600"
+                                }
+                              >
+                                {user.active !== false ? "نشط" : "معلق"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-slate-400 text-sm">
+                              {user.created_at ? new Date(user.created_at).toLocaleDateString("ar-SA") : "غير محدد"}
+                            </TableCell>
+                            <TableCell className="text-left">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-slate-400 hover:text-white hover:bg-slate-800"
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800">
+                                  <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
+                                    <Eye className="h-4 w-4 ml-2" />
+                                    عرض التفاصيل
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
+                                    <Edit className="h-4 w-4 ml-2" />
+                                    تعديل
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
+                                    <Shield className="h-4 w-4 ml-2" />
+                                    تغيير الصلاحيات
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator className="bg-slate-800" />
+                                  <DropdownMenuItem className="text-red-400 focus:bg-red-500/10 focus:text-red-300">
+                                    <Trash2 className="h-4 w-4 ml-2" />
+                                    حذف
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </CardContent>
@@ -1331,53 +1313,80 @@ export default function AdminPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-slate-300">
-                الاسم الكامل
+                الاسم الكامل <span className="text-red-400">*</span>
               </Label>
-              <Input id="name" placeholder="أدخل الاسم الكامل" className="bg-slate-800 border-slate-700 text-white" />
+              <Input 
+                id="name" 
+                placeholder="أدخل الاسم الكامل" 
+                className="bg-slate-800 border-slate-700 text-white"
+                value={newUserData.name}
+                onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-300">
-                البريد الإلكتروني
+                البريد الإلكتروني <span className="text-red-400">*</span>
               </Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="user@example.com"
                 className="bg-slate-800 border-slate-700 text-white"
+                value={newUserData.email}
+                onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-slate-300">
+                كلمة المرور <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="أدخل كلمة المرور (8 أحرف على الأقل)"
+                className="bg-slate-800 border-slate-700 text-white"
+                value={newUserData.password}
+                onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="role" className="text-slate-300">
                 الدور
               </Label>
-              <Select>
+              <Select 
+                value={newUserData.role}
+                onValueChange={(value) => setNewUserData({ ...newUserData, role: value })}
+              >
                 <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
                   <SelectValue placeholder="اختر الدور" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">مدير</SelectItem>
-                  <SelectItem value="auditor">مدقق</SelectItem>
-                  <SelectItem value="reviewer">مراجع</SelectItem>
+                  <SelectItem value="User">مستخدم</SelectItem>
+                  <SelectItem value="Admin">مدير</SelectItem>
+                  <SelectItem value="Auditor">مدقق</SelectItem>
+                  <SelectItem value="Manager">مدير تدقيق</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <Switch id="active" />
-              <Label htmlFor="active" className="text-slate-300">
-                تفعيل الحساب
-              </Label>
             </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setShowUserDialog(false)}
+              onClick={() => {
+                setShowUserDialog(false)
+                setNewUserData({ name: "", email: "", password: "", role: "User" })
+              }}
               className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+              disabled={createUserMutation.isPending}
             >
               إلغاء
             </Button>
-            <Button className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 hover:from-indigo-700 hover:to-purple-700">
-              إضافة
+            <Button 
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 hover:from-indigo-700 hover:to-purple-700"
+              onClick={handleCreateUser}
+              disabled={createUserMutation.isPending}
+            >
+              {createUserMutation.isPending ? "جاري الإضافة..." : "إضافة"}
             </Button>
           </DialogFooter>
         </DialogContent>

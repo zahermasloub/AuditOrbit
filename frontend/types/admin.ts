@@ -47,11 +47,12 @@ export interface AdminUser {
   id: string;
   name: string;
   email: string;
-  role: string;
-  status: string;
-  last_login: string;
-  engagements: number;
-  avatar: string;
+  role: string | null;
+  locale?: string | null;
+  timezone?: string | null;
+  active?: boolean | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 export interface AdminRole {

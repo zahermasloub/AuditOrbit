@@ -371,7 +371,7 @@ async def minio_webhook(payload: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True}
 
 
-@router.get("/ops/storage/objects", tags=["ops"])
+@router.get("/ops/storage/objects", tags=["ops"], response_model=None)
 async def storage_objects(
     prefix: str | None = Query(None, description="المجلد الحالي"),
     q: str | None = Query(None, description="نص للبحث"),
@@ -452,7 +452,7 @@ async def storage_objects(
     return payload
 
 
-@router.get("/ops/storage/download-url", tags=["ops"])
+@router.get("/ops/storage/download-url", tags=["ops"], response_model=None)
 async def storage_download_url(key: str = Query(..., description="المسار الكامل للملف")) -> JSONResponse | dict[str, Any]:
     try:
         bucket = _get_bucket_name()
@@ -478,7 +478,7 @@ async def storage_download_url(key: str = Query(..., description="المسار �
     return {"url": url}
 
 
-@router.post("/ops/storage/upload-url", tags=["ops"])
+@router.post("/ops/storage/upload-url", tags=["ops"], response_model=None)
 async def storage_upload_url(payload: dict[str, Any]) -> JSONResponse | dict[str, Any]:
     try:
         bucket = _get_bucket_name()
@@ -505,7 +505,7 @@ async def storage_upload_url(payload: dict[str, Any]) -> JSONResponse | dict[str
     return {"url": url, "headers": {"Content-Type": content_type}, "key": normalized_key}
 
 
-@router.put("/ops/storage/rename", tags=["ops"])
+@router.put("/ops/storage/rename", tags=["ops"], response_model=None)
 async def storage_rename(payload: dict[str, Any]) -> JSONResponse | dict[str, Any]:
     try:
         bucket = _get_bucket_name()
@@ -544,7 +544,7 @@ async def storage_rename(payload: dict[str, Any]) -> JSONResponse | dict[str, An
     return {"renamed": True, "source": source, "target": target}
 
 
-@router.post("/ops/storage/move-copy", tags=["ops"])
+@router.post("/ops/storage/move-copy", tags=["ops"], response_model=None)
 async def storage_move_copy(payload: dict[str, Any]) -> JSONResponse | dict[str, Any]:
     try:
         bucket = _get_bucket_name()
@@ -599,7 +599,7 @@ async def storage_move_copy(payload: dict[str, Any]) -> JSONResponse | dict[str,
     return {"processed": len(processed), "mode": mode}
 
 
-@router.delete("/ops/storage/objects", tags=["ops"])
+@router.delete("/ops/storage/objects", tags=["ops"], response_model=None)
 async def storage_delete(payload: dict[str, Any]) -> JSONResponse | dict[str, Any]:
     try:
         bucket = _get_bucket_name()
@@ -668,7 +668,7 @@ async def list_settings(
     return {"items": items, "total": len(items)}
 
 
-@router.post("/ops/settings", tags=["ops"])
+@router.post("/ops/settings", tags=["ops"], response_model=None)
 async def create_setting(payload: dict[str, Any]) -> JSONResponse | dict[str, Any]:
     _ensure_settings_table()
 
@@ -734,7 +734,7 @@ async def create_setting(payload: dict[str, Any]) -> JSONResponse | dict[str, An
     }}
 
 
-@router.put("/ops/settings", tags=["ops"])
+@router.put("/ops/settings", tags=["ops"], response_model=None)
 async def update_settings_bulk(payload: dict[str, Any]) -> JSONResponse | dict[str, Any]:
     _ensure_settings_table()
 
@@ -798,7 +798,7 @@ async def update_settings_bulk(payload: dict[str, Any]) -> JSONResponse | dict[s
     return {"updated": len(updated_keys), "missing": missing}
 
 
-@router.get("/ops/settings/{key}", tags=["ops"])
+@router.get("/ops/settings/{key}", tags=["ops"], response_model=None)
 async def get_setting(key: str) -> JSONResponse | dict[str, Any]:
     _ensure_settings_table()
 
@@ -814,7 +814,7 @@ async def get_setting(key: str) -> JSONResponse | dict[str, Any]:
     return {"item": _row_to_setting(dict(row))}
 
 
-@router.put("/ops/settings/{key}", tags=["ops"])
+@router.put("/ops/settings/{key}", tags=["ops"], response_model=None)
 async def update_setting(key: str, payload: dict[str, Any]) -> JSONResponse | dict[str, Any]:
     _ensure_settings_table()
 
@@ -881,7 +881,7 @@ async def update_setting(key: str, payload: dict[str, Any]) -> JSONResponse | di
     }
 
 
-@router.delete("/ops/settings/{key}", tags=["ops"])
+@router.delete("/ops/settings/{key}", tags=["ops"], response_model=None)
 async def delete_setting(key: str, reset: bool = Query(False, description="إرجاع القيمة للوضع الافتراضي")) -> JSONResponse | dict[str, Any]:
     _ensure_settings_table()
 

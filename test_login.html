@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار تسجيل الدخول - AuditOrbit</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        .container {
+            background: #2a2a2a;
+            padding: 30px;
+            border-radius: 10px;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #333;
+            color: #fff;
+            font-size: 16px;
+        }
+        button {
+            background: #4f46e5;
+            cursor: pointer;
+            border: none;
+        }
+        button:hover {
+            background: #4338ca;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #333;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success {
+            background: #065f46;
+        }
+        .error {
+            background: #7f1d1d;
+        }
+        h2 {
+            color: #4f46e5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🔐 اختبار تسجيل الدخول</h2>
+        <p>اختبار الاتصال مع Backend API</p>
+        
+        <input type="email" id="email" placeholder="البريد الإلكتروني" value="admin@audit.com">
+        <input type="password" id="password" placeholder="كلمة المرور" value="admin123">
+        <button onclick="testLogin()">تسجيل الدخول</button>
+        
+        <div id="result"></div>
+        
+        <h3 style="margin-top: 30px;">الخطوات:</h3>
+        <ol>
+            <li>تأكد من تشغيل Backend على http://127.0.0.1:8000</li>
+            <li>استخدم البيانات المعروضة (admin@audit.com / admin123)</li>
+            <li>انقر "تسجيل الدخول"</li>
+            <li>إذا نجح، سيظهر الـ access_token</li>
+        </ol>
+    </div>
+
+    <script>
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<div class="result">جاري الاتصال...</div>';
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8000/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('auth_token', data.access_token);
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            <strong>✅ نجح تسجيل الدخول!</strong><br><br>
+                            <strong>Access Token:</strong><br>
+                            ${data.access_token.substring(0, 50)}...<br><br>
+                            <strong>User Info:</strong><br>
+                            الاسم: ${data.user.name}<br>
+                            البريد: ${data.user.email}<br>
+                            الدور: ${data.user.role}<br><br>
+                            <strong>تم حفظ الـ token في localStorage!</strong><br>
+                            يمكنك الآن الذهاب إلى:<br>
+                            <a href="http://localhost:3000/admin" style="color: #60a5fa;">http://localhost:3000/admin</a>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            <strong>❌ فشل تسجيل الدخول</strong><br><br>
+                            ${JSON.stringify(data, null, 2)}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        <strong>❌ خطأ في الاتصال</strong><br><br>
+                        ${error.message}<br><br>
+                        <strong>تأكد من:</strong><br>
+                        1. Backend يعمل على http://127.0.0.1:8000<br>
+                        2. لا توجد مشاكل في CORS<br>
+                        3. المستخدم موجود في قاعدة البيانات
+                    </div>
+                `;
+            }
+        }
+        
+        // Test API endpoint on load
+        window.onload = async function() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/docs');
+                if (response.ok) {
+                    console.log('✅ Backend متصل بنجاح');
+                }
+            } catch (error) {
+                console.error('❌ Backend غير متصل');
+            }
+        }
+    </script>
+</body>
+</html>

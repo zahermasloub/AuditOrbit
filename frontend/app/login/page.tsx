@@ -17,43 +17,101 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const performLogin = async (loginEmail: string, loginPassword: string, redirectPath = "/admin") => {
+    const trimmedEmail = loginEmail.trim()
+    const sanitizedPassword = loginPassword.trim()
+
+    if (!trimmedEmail || !sanitizedPassword) {
+      setError("الرجاء إدخال البريد الإلكتروني وكلمة المرور")
+      return false
+    }
+
+    if (sanitizedPassword.length < 8) {
+      setError("كلمة المرور يجب أن تتكون من 8 أحرف على الأقل")
+      return false
+    }
+
     setIsLoading(true)
     setError("")
 
     try {
-      const response = await apiClient.POST('/auth/login', {
+      const response = await apiClient.POST("/auth/login", {
         body: {
-          email: email,
-          password: password
-        }
+          email: trimmedEmail,
+          password: sanitizedPassword,
+        },
       })
 
       if (response.data) {
         const tokenData = response.data as any
-        
-        // حفظ الـ Token
+
         if (tokenData.access_token) {
           TokenManager.setToken(tokenData.access_token)
         }
         if (tokenData.refresh_token) {
           TokenManager.setRefreshToken(tokenData.refresh_token)
         }
-        
-        // الانتقال للـ Dashboard
-        window.location.href = "/dashboard"
-      } else if (response.error) {
-        // عرض رسالة الخطأ
-        setError('بيانات تسجيل الدخول غير صحيحة')
+        if (tokenData.user) {
+          localStorage.setItem("user", JSON.stringify(tokenData.user))
+        }
+
+        window.location.href = redirectPath
+        return true
       }
-    } catch (err) {
-      console.error('Login error:', err)
-      setError('حدث خطأ أثناء تسجيل الدخول')
+
+      if (response.error) {
+        const apiError = response.error as any
+        const message =
+          apiError?.error?.message ||
+          apiError?.message ||
+          apiError?.error?.details?.errors?.[0]?.message ||
+          "بيانات تسجيل الدخول غير صحيحة"
+        setError(message)
+      }
+      return false
+    } catch (err: any) {
+      console.error("Login error:", err)
+      const fallbackMessage = err?.message?.includes("401")
+        ? "بيانات تسجيل الدخول غير صحيحة"
+        : "حدث خطأ أثناء تسجيل الدخول"
+      setError(fallbackMessage)
+      return false
     } finally {
       setIsLoading(false)
     }
   }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const trimmedEmail = email.trim()
+    const trimmedPassword = password.trim()
+    setEmail(trimmedEmail)
+    setPassword(trimmedPassword)
+    await performLogin(trimmedEmail, trimmedPassword)
+  }
+
+  const handleQuickLogin = async (loginEmail: string, loginPassword: string, redirectPath = "/admin") => {
+    setEmail(loginEmail)
+    setPassword(loginPassword)
+    await performLogin(loginEmail, loginPassword, redirectPath)
+  }
+
+  const quickAccounts = [
+    {
+      label: "👨‍💼 Admin",
+      email: "admin@example.com",
+      password: "Admin#2025",
+      redirect: "/admin",
+      className: "bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs",
+    },
+    {
+      label: "🛠️ Test Admin",
+      email: "admin@audit.com",
+      password: "admin123",
+      redirect: "/admin",
+      className: "bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs",
+    },
+  ] as const
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex items-center justify-center p-4">
@@ -93,6 +151,7 @@ export default function LoginPage() {
                   required
                   className="pr-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500"
                   dir="ltr"
+                  autoComplete="email"
                 />
               </div>
             </div>
@@ -113,6 +172,7 @@ export default function LoginPage() {
                   required
                   className="pr-10 pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500"
                   dir="ltr"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -177,62 +237,23 @@ export default function LoginPage() {
 
           {/* Mock Login Buttons - للتطوير */}
           <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-            <p className="text-xs text-slate-400 text-center mb-3">🚀 تسجيل دخول سريع (Mock)</p>
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                type="button"
-                onClick={() => {
-                  const mockUser = {
-                    id: "1",
-                    name: "مدير النظام",
-                    email: "admin@test.com",
-                    role: "admin"
-                  }
-                  localStorage.setItem("auth_token", "mock_admin_token")
-                  localStorage.setItem("user", JSON.stringify(mockUser))
-                  window.location.href = "/admin"
-                }}
-                className="bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs"
-              >
-                👨‍💼 Admin
-              </Button>
-              
-              <Button
-                type="button"
-                onClick={() => {
-                  const mockUser = {
-                    id: "2",
-                    name: "مدير المراجعة",
-                    email: "manager@test.com",
-                    role: "manager"
-                  }
-                  localStorage.setItem("auth_token", "mock_manager_token")
-                  localStorage.setItem("user", JSON.stringify(mockUser))
-                  window.location.href = "/manager"
-                }}
-                className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs"
-              >
-                👔 Manager
-              </Button>
-              
-              <Button
-                type="button"
-                onClick={() => {
-                  const mockUser = {
-                    id: "3",
-                    name: "المدقق",
-                    email: "auditor@test.com",
-                    role: "auditor"
-                  }
-                  localStorage.setItem("auth_token", "mock_auditor_token")
-                  localStorage.setItem("user", JSON.stringify(mockUser))
-                  window.location.href = "/auditor"
-                }}
-                className="bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-300 text-xs"
-              >
-                📝 Auditor
-              </Button>
+            <p className="text-xs text-slate-400 text-center mb-3">🚀 تسجيل دخول سريع بالحسابات الحقيقية</p>
+            <div className="grid grid-cols-2 gap-2">
+              {quickAccounts.map((account) => (
+                <Button
+                  key={account.email}
+                  type="button"
+                  onClick={() => handleQuickLogin(account.email, account.password, account.redirect)}
+                  className={account.className}
+                  disabled={isLoading}
+                >
+                  {account.label}
+                </Button>
+              ))}
             </div>
+            <p className="text-[11px] text-center text-amber-300/80 mt-3">
+              يتم تسجيل الدخول عبر واجهة الـ API الحقيقية وتخزين الرموز بأمان.
+            </p>
           </div>
         </CardContent>
       </Card>

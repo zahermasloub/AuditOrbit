@@ -3,7 +3,7 @@
  * Custom hooks for fetching admin dashboard data
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   AdminKPIs,
   EngagementTrend,
@@ -20,7 +20,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const getAuthHeaders = () => {
   // Try to get token from localStorage (only in browser)
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("auth_token") || localStorage.getItem("access_token");
     return {
       "Content-Type": "application/json",
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -216,5 +216,37 @@ export function useUsersStats() {
     },
     staleTime: 120000, // 2 minutes
     retry: false,
+  });
+}
+
+// Create User Mutation
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (userData: {
+      name: string;
+      email: string;
+      password: string;
+      role?: string;
+      locale?: string;
+    }) => {
+      const response = await fetch(`${API_BASE_URL}/users`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(userData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "فشل في إنشاء المستخدم");
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate users list to refetch after successful creation
+      queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+    },
   });
 }
