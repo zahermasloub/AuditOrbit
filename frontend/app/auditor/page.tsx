@@ -44,6 +44,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
+import { DynamicBreadcrumbs } from "@/components/dynamic-breadcrumbs"
 
 export default function AuditorPage() {
   const router = useRouter()
@@ -275,6 +276,8 @@ export default function AuditorPage() {
       {/* Header */}
       <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4">
+          <DynamicBreadcrumbs className="mb-4" />
+          
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3">

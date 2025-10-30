@@ -21,6 +21,7 @@ import {
   Calendar,
   Bell,
   MessageSquare,
+  Activity,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -47,10 +48,13 @@ import { FindingsSection } from "@/components/findings-section"
 import { ReportsSection } from "@/components/reports-section"
 import { FollowUpSection } from "@/components/followup-section"
 import { dashboardApi } from "@/lib/api"
+import { useAuth } from "@/lib/auth-context"
+import { RoleBadge } from "@/components/auth/role-based-ui"
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeSection, setActiveSection] = useState("dashboard")
+  const { user } = useAuth()
   const [stats, setStats] = useState({
     active_engagements: 0,
     open_findings: 0,
@@ -256,11 +260,13 @@ export default function DashboardPage() {
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
-              A
+              {user?.name?.charAt(0).toUpperCase() || "A"}
             </div>
             <div className="flex-1">
-              <p className="text-white font-medium text-sm">Admin User</p>
-              <p className="text-slate-400 text-xs">مدير النظام</p>
+              <p className="text-white font-medium text-sm">{user?.name || "Admin User"}</p>
+              <div className="mt-1">
+                <RoleBadge />
+              </div>
             </div>
           </div>
           <Button

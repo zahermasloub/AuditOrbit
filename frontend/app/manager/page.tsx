@@ -4,6 +4,7 @@ import Link from "next/link"
 import { FolderKanban, Search, FileChartColumn, Activity } from "lucide-react"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { DynamicBreadcrumbs } from "@/components/dynamic-breadcrumbs"
 
 const managerItems = [
   {
@@ -45,6 +46,8 @@ export default function ManagerPage() {
   return (
     <div className="min-h-screen bg-slate-950 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        <DynamicBreadcrumbs />
+        
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-white">مساحة المدير</h1>
           <p className="text-slate-400">IA Manager - إدارة الخطط والمهام والنتائج والتقارير</p>

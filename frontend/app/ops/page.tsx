@@ -17,6 +17,7 @@ import {
 } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { ar } from "date-fns/locale"
+import { DynamicBreadcrumbs } from "@/components/dynamic-breadcrumbs"
 
 const COLOR_VARIANTS = {
     indigo: {
@@ -197,6 +198,8 @@ export default function OpsOverview() {
 
     return (
         <div className="space-y-6">
+            <DynamicBreadcrumbs />
+            
             <div>
                 <h2 className="text-3xl font-bold bg-gradient-to-l from-indigo-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent mb-2">
                     نظرة عامة على النظام
