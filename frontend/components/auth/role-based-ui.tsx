@@ -84,7 +84,7 @@ interface OpsAccessBannerProps {
   className?: string
 }
 
-export function OpsAccessBanner({ className }: OpsAccessBannerProps = {}) {
+export function OpsAccessBanner({ className = "" }: OpsAccessBannerProps) {
   const role = useUserRole()
   const opsPermissions = useOpsPermissions()
 
