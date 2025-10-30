@@ -1,8 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { FolderKanban, Search, FileChartColumn } from "lucide-react"
+import { FolderKanban, Search, FileChartColumn, Activity } from "lucide-react"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 const managerItems = [
   {
@@ -29,6 +30,15 @@ const managerItems = [
     icon: FileChartColumn,
     color: "text-green-600",
   },
+  {
+    href: "/ops",
+    title: "حالة النظام",
+    titleEn: "System Status",
+    description: "مراقبة صحة النظام (قراءة فقط)",
+    icon: Activity,
+    color: "text-amber-600",
+    badge: "مراقبة",
+  },
 ]
 
 export default function ManagerPage() {
@@ -52,9 +62,16 @@ export default function ManagerPage() {
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="flex-1">
-                        <CardTitle className="text-white text-lg">
-                          {item.title} / {item.titleEn}
-                        </CardTitle>
+                        <div className="flex items-center gap-2 mb-1">
+                          <CardTitle className="text-white text-lg">
+                            {item.title} / {item.titleEn}
+                          </CardTitle>
+                          {item.badge && (
+                            <Badge variant="outline" className="bg-amber-500/10 text-amber-400 border-amber-500/30 text-xs">
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </div>
                         <CardDescription className="text-slate-400 mt-1">
                           {item.description}
                         </CardDescription>

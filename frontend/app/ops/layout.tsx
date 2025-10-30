@@ -20,10 +20,13 @@ import {
 	X,
 } from "lucide-react"
 import { Suspense } from "react"
+import { useAuth } from "@/lib/auth-context"
+import { OpsAccessBanner } from "@/components/auth/role-based-ui"
 
 export default function OpsLayout({ children }: { children: React.ReactNode }) {
 	const pathname = usePathname()
 	const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+	const { user } = useAuth()
 
 	const navItems = [
 		{ href: "/ops", label: "نظرة عامة", icon: LayoutGrid, badge: null },
@@ -98,15 +101,15 @@ export default function OpsLayout({ children }: { children: React.ReactNode }) {
 									<span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full shadow-lg shadow-rose-500/50" />
 								</button>
 
-								<div className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-800/50 rounded-lg transition-colors cursor-pointer">
-									<div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
-										<User className="h-4 w-4 text-white" />
-									</div>
-									<div className="hidden lg:block text-right">
-										<p className="text-sm font-medium text-slate-200">مدير النظام</p>
-										<p className="text-xs text-slate-400">DevOps Admin</p>
-									</div>
+							<div className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-800/50 rounded-lg transition-colors cursor-pointer">
+								<div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
+									<User className="h-4 w-4 text-white" />
 								</div>
+								<div className="hidden lg:block text-right">
+									<p className="text-sm font-medium text-slate-200">{user?.name || "مدير النظام"}</p>
+									<p className="text-xs text-slate-400">{user?.role === "admin" ? "DevOps Admin" : "Manager"}</p>
+								</div>
+							</div>
 							</div>
 						</div>
 					</div>
@@ -208,7 +211,12 @@ export default function OpsLayout({ children }: { children: React.ReactNode }) {
 				</aside>
 
 				{/* Main Content */}
-				<main className="flex-1 p-6 overflow-auto h-[calc(100vh-5rem)]">{children}</main>
+				<main className="flex-1 p-6 overflow-auto h-[calc(100vh-5rem)]">
+					{/* Banner للـ Manager */}
+					{user?.role === "manager" && <OpsAccessBanner className="mb-6" />}
+					
+					{children}
+				</main>
 			</div>
 		</div>
 	)
