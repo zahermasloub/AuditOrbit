@@ -174,6 +174,66 @@ export default function LoginPage() {
               </p>
             </div>
           </div>
+
+          {/* Mock Login Buttons - للتطوير */}
+          <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+            <p className="text-xs text-slate-400 text-center mb-3">🚀 تسجيل دخول سريع (Mock)</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                type="button"
+                onClick={() => {
+                  const mockUser = {
+                    id: "1",
+                    name: "مدير النظام",
+                    email: "admin@test.com",
+                    role: "admin"
+                  }
+                  localStorage.setItem("auth_token", "mock_admin_token")
+                  localStorage.setItem("user", JSON.stringify(mockUser))
+                  window.location.href = "/admin"
+                }}
+                className="bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 text-xs"
+              >
+                👨‍💼 Admin
+              </Button>
+              
+              <Button
+                type="button"
+                onClick={() => {
+                  const mockUser = {
+                    id: "2",
+                    name: "مدير المراجعة",
+                    email: "manager@test.com",
+                    role: "manager"
+                  }
+                  localStorage.setItem("auth_token", "mock_manager_token")
+                  localStorage.setItem("user", JSON.stringify(mockUser))
+                  window.location.href = "/manager"
+                }}
+                className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 text-xs"
+              >
+                👔 Manager
+              </Button>
+              
+              <Button
+                type="button"
+                onClick={() => {
+                  const mockUser = {
+                    id: "3",
+                    name: "المدقق",
+                    email: "auditor@test.com",
+                    role: "auditor"
+                  }
+                  localStorage.setItem("auth_token", "mock_auditor_token")
+                  localStorage.setItem("user", JSON.stringify(mockUser))
+                  window.location.href = "/auditor"
+                }}
+                className="bg-green-500/20 hover:bg-green-500/30 border border-green-500/40 text-green-300 text-xs"
+              >
+                📝 Auditor
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
