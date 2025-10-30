@@ -1,0 +1,44 @@
+[
+	{
+		"id": 1,
+		"title": "Review specification",
+		"description": "Read DIV_Code/EXPORT_OPS_CONSOLE_CRUD_IMPLEMENTATION_COMPLETE.md to capture requirements and naming.",
+		"status": "completed"
+	},
+		{
+		"id": 2,
+		"title": "Audit existing backend/frontend",
+		"description": "Inspect current /ops backend router and storage page implementation to align naming and avoid conflicts.",
+				"status": "completed"
+	},
+	{
+		"id": 3,
+		"title": "Plan aligned changes",
+		"description": "Map spec actions to concrete backend endpoints and frontend components respecting existing environment.",
+		"status": "completed"
+	},
+	{
+		"id": 4,
+		"title": "Implement backend storage CRUD",
+		"description": "Add/extend FastAPI ops storage endpoints per plan with validations and SSE hooks.",
+		"status": "completed"
+	},
+	{
+		"id": 5,
+		"title": "Implement frontend storage CRUD",
+		"description": "Update frontend/app/ops storage pages and components with full CRUD flows and API bindings.",
+		"status": "completed"
+	},
+	{
+		"id": 6,
+		"title": "Integrate settings page",
+		"description": "Ensure settings page hooks align with backend endpoints, handle CRUD actions, and error states.",
+		"status": "completed"
+	},
+	{
+		"id": 7,
+		"title": "Testing and polish",
+		"description": "Run backend/frontend checks, validate flows, adjust styling, and summarize changes.",
+		"status": "pending"
+	}
+]
