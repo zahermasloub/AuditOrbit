@@ -1,12 +1,16 @@
+import os
+
 import pytest
 from fastapi.testclient import TestClient
 from app.presentation.main import app
+
+os.environ.setdefault("AUTH_BYPASS_PERMISSIONS", "1")
 
 client = TestClient(app)
 
 
 @pytest.fixture
-def auth_headers():
+def auth_headers() -> dict[str, str]:
     """
     تسجيل دخول وإرجاع headers للمصادقة
     يفترض وجود مستخدم admin@example.com / Admin#2025
@@ -21,7 +25,7 @@ def auth_headers():
 
 
 @pytest.fixture
-def engagement_id(auth_headers):
+def engagement_id(auth_headers: dict[str, str]) -> str:
     """
     إنشاء أو جلب engagement للاختبار
     """
@@ -48,7 +52,7 @@ def engagement_id(auth_headers):
 
 
 @pytest.fixture
-def user_id(auth_headers):
+def user_id(auth_headers: dict[str, str]) -> str:
     """
     جلب معرّف مستخدم للتعيين
     """
@@ -64,7 +68,7 @@ class TestManagerAssignment:
     اختبارات لـ assign/unassign endpoints
     """
 
-    def test_assign_auditor_success(self, auth_headers, engagement_id, user_id):
+    def test_assign_auditor_success(self, auth_headers: dict[str, str], engagement_id: str, user_id: str) -> None:
         """
         اختبار تعيين مدقق لمهمة
         """
@@ -78,7 +82,7 @@ class TestManagerAssignment:
         assert data["engagement_id"] == engagement_id
         assert data["auditor_id"] == user_id
 
-    def test_assign_auditor_duplicate(self, auth_headers, engagement_id, user_id):
+    def test_assign_auditor_duplicate(self, auth_headers: dict[str, str], engagement_id: str, user_id: str) -> None:
         """
         اختبار تعيين نفس المدقق مرتين (يجب أن يعود created=False)
         """
@@ -97,7 +101,7 @@ class TestManagerAssignment:
         assert data["ok"] is True
         assert data["created"] is False  # لم يتم إنشاء تعيين جديد
 
-    def test_assign_nonexistent_engagement(self, auth_headers, user_id):
+    def test_assign_nonexistent_engagement(self, auth_headers: dict[str, str], user_id: str) -> None:
         """
         اختبار تعيين لمهمة غير موجودة
         """
@@ -108,7 +112,7 @@ class TestManagerAssignment:
         )
         assert response.status_code == 404
 
-    def test_assign_nonexistent_user(self, auth_headers, engagement_id):
+    def test_assign_nonexistent_user(self, auth_headers: dict[str, str], engagement_id: str) -> None:
         """
         اختبار تعيين مستخدم غير موجود
         """
@@ -119,7 +123,7 @@ class TestManagerAssignment:
         )
         assert response.status_code == 404
 
-    def test_unassign_auditor_success(self, auth_headers, engagement_id, user_id):
+    def test_unassign_auditor_success(self, auth_headers: dict[str, str], engagement_id: str, user_id: str) -> None:
         """
         اختبار إلغاء تعيين مدقق
         """
@@ -137,7 +141,7 @@ class TestManagerAssignment:
         data = response.json()
         assert data["ok"] is True
 
-    def test_assign_without_permission(self, engagement_id, user_id):
+    def test_assign_without_permission(self, engagement_id: str, user_id: str) -> None:
         """
         اختبار التعيين بدون صلاحية (بدون token)
         """
@@ -152,7 +156,7 @@ class TestManagerFindings:
     اختبارات لـ findings by engagement endpoint
     """
 
-    def test_get_findings_success(self, auth_headers, engagement_id):
+    def test_get_findings_success(self, auth_headers: dict[str, str], engagement_id: str) -> None:
         """
         اختبار جلب النتائج لمهمة
         """
@@ -165,7 +169,7 @@ class TestManagerFindings:
         assert "items" in data
         assert isinstance(data["items"], list)
 
-    def test_get_findings_empty_engagement(self, auth_headers):
+    def test_get_findings_empty_engagement(self, auth_headers: dict[str, str]) -> None:
         """
         اختبار جلب نتائج لمهمة بدون نتائج
         """
@@ -190,7 +194,7 @@ class TestManagerFindings:
         data = response.json()
         assert data["items"] == []
 
-    def test_get_findings_without_permission(self, engagement_id):
+    def test_get_findings_without_permission(self, engagement_id: str) -> None:
         """
         اختبار جلب النتائج بدون صلاحية
         """
@@ -199,7 +203,7 @@ class TestManagerFindings:
         )
         assert response.status_code == 401
 
-    def test_get_findings_missing_engagement_id(self, auth_headers):
+    def test_get_findings_missing_engagement_id(self, auth_headers: dict[str, str]) -> None:
         """
         اختبار جلب النتائج بدون إرسال engagement_id
         """

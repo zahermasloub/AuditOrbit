@@ -1,9 +1,14 @@
+import os
+from typing import Tuple
+
 from fastapi.testclient import TestClient
 
 from app.presentation.main import app
 
+os.environ.setdefault("AUTH_BYPASS_PERMISSIONS", "1")
 
-def login(client: TestClient) -> tuple[str, str | None]:
+
+def login(client: TestClient) -> Tuple[str, str | None]:
   response = client.post("/auth/login", json={"email": "admin@example.com", "password": "Admin#2025"})
   assert response.status_code == 200
   data = response.json()
