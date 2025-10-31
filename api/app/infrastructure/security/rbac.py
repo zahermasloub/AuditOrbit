@@ -1,28 +1,28 @@
+import os
+
 from fastapi import HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 
 def has_permission(db: Session, user_id: str, resource: str, action: str) -> bool:
-  # Temporarily disabled - permissions tables don't exist in new schema
-  # TODO: Implement proper RBAC with new schema
-  return True  # Allow all for now
-  
-  # Original code (commented out):
-  # query = db.execute(
-  #   text(
-  #     """
-  #       SELECT 1
-  #       FROM user_roles ur
-  #       JOIN role_permissions rp ON rp.role_id = ur.role_id
-  #       JOIN permissions p ON p.id = rp.perm_id
-  #       WHERE ur.user_id = :uid AND p.resource = :res AND p.action = :act
-  #       LIMIT 1;
-  #     """
-  #   ),
-  #   {"uid": user_id, "res": resource, "act": action},
-  # ).first()
-  # return bool(query)
+  if os.getenv("AUTH_BYPASS_PERMISSIONS") == "1":
+    return True
+
+  query = db.execute(
+    text(
+      """
+        SELECT 1
+        FROM user_roles ur
+        JOIN role_permissions rp ON rp.role_id = ur.role_id
+        JOIN permissions p ON p.id = rp.perm_id
+        WHERE ur.user_id::text = :uid AND p.resource = :res AND p.action = :act
+        LIMIT 1
+      """
+    ),
+    {"uid": user_id, "res": resource, "act": action},
+  ).first()
+  return bool(query)
 
 
 def enforce(db: Session, user_id: str, resource: str, action: str) -> None:

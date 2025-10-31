@@ -22,11 +22,33 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r api/requirements.txt
-      - run: |
-          cd api
-          alembic -c alembic.ini upgrade head
-          pytest -q || true
+          cache: "pip"
+      - name: Install dependencies
+        run: pip install -r api/requirements.txt -r api/requirements-dev.txt
+      - name: Run database migrations
+        working-directory: api
+        run: alembic -c alembic.ini upgrade head
+        env:
+          DATABASE_URL: postgresql://audit:auditpw@localhost:5432/auditdb
+      - name: Lint with ruff
+        working-directory: api
+        run: ruff check .
+      - name: Check formatting with black
+        working-directory: api
+        run: black --check .
+      - name: Enforce import contracts
+        working-directory: api
+        run: lint-imports
+      - name: Run tests with coverage
+        working-directory: api
+        env:
+          DATABASE_URL: postgresql://audit:auditpw@localhost:5432/auditdb
+        run: pytest --cov=app --cov-report=xml --cov-report=term-missing
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: api/coverage.xml
 
   frontend-tests:
     runs-on: ubuntu-latest
@@ -35,6 +57,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: cd web && pnpm i
-      - run: cd web && pnpm dlx playwright install --with-deps
-      - run: cd web && pnpm test:e2e || true
+      - name: Enable corepack
+        run: corepack enable
+      - name: Set up pnpm cache
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+          run_install: false
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: pnpm dlx playwright install --with-deps
+      - name: Run frontend tests
+        working-directory: frontend
+        run: pnpm test:e2e

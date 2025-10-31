@@ -1,6 +1,105 @@
+[project]
+name = "audit-orbit-api"
+version = "0.1.0"
+description = "AuditOrbit FastAPI service"
+requires-python = ">=3.12"
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+exclude = """
+/(
+		\\.git
+	| \\.mypy_cache
+	| \\.pytest_cache
+	| \\.ruff_cache
+	| \\.venv
+	| build
+	| dist
+	| migrations
+)
+"""
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "I", "N", "UP", "B", "S", "ASYNC", "C4"]
+ignore = ["E203", "E266", "E501", "S101"]
+exclude = [
+	".git",
+	".mypy_cache",
+	".pytest_cache",
+	".ruff_cache",
+	".venv",
+	"build",
+	"dist",
+	"alembic",
+	"migrations",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
-addopts = "-v --tb=short"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+	"-v",
+	"--tb=short",
+	"--strict-markers",
+	"--cov=app",
+	"--cov-report=term-missing",
+	"--cov-report=xml",
+]
+markers = [
+	"unit: isolated fast unit tests",
+	"integration: database or multi-service integration tests",
+	"contract: OpenAPI/consumer contract verification",
+	"slow: deliberately slow tests",
+]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = [
+	"app/tests/*",
+	"tests/*",
+	"*/migrations/*",
+]
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true
+exclude_lines = [
+	"pragma: no cover",
+	"if TYPE_CHECKING:",
+	"if __name__ == '__main__':",
+	"@abstractmethod",
+]
+
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "clean-architecture-layers"
+type = "layers"
+layers = [
+	"app.presentation",
+	"app.infrastructure",
+	"app.application",
+	"app.domain",
+]
+
+[tool.radon]
+exclude = ["tests", "migrations", "alembic"]
+cc_min = "B"
+mi_min = 65
+
+[tool.mypy]
+python_version = "3.12"
+warn_unused_configs = true
+warn_return_any = true
+warn_redundant_casts = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+

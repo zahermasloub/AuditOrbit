@@ -1,5 +1,7 @@
 import bcrypt
 
+from app.domain.ports.password_hasher import PasswordHasher
+
 
 def hash_password(plain: str) -> str:
   """Hash a password using bcrypt."""
@@ -17,3 +19,10 @@ def verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(password_bytes, hashed_bytes)
   except Exception:
     return False
+
+
+class BcryptPasswordHasher(PasswordHasher):
+  """Adapter that satisfies the password hashing port using bcrypt."""
+
+  def hash(self, plaintext: str) -> str:
+    return hash_password(plaintext)
