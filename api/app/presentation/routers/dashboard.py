@@ -204,8 +204,8 @@ def get_recent_engagements(
         e.id::text,
         e.title,
         e.status::text as status,
-        to_char(e."startDate", 'YYYY-MM-DD') as start_date,
-        to_char(e."endDate", 'YYYY-MM-DD') as end_date,
+        to_char(e.start_date, 'YYYY-MM-DD') as start_date,
+        to_char(e.end_date, 'YYYY-MM-DD') as end_date,
         COALESCE(e.risk_rating, 'medium') as risk_rating,
         CASE e.status
           WHEN 'DRAFT' THEN 5
@@ -219,7 +219,7 @@ def get_recent_engagements(
         END as progress
       FROM engagements e
       WHERE e.status != 'COMPLETED'
-      ORDER BY e."createdAt" DESC
+      ORDER BY e.created_at DESC
       LIMIT :limit
     """),
     {"limit": limit}

@@ -107,11 +107,11 @@ def get_admin_kpis(
         # Average completion time (in days)
         avg_days_result = db.execute(
             text("""
-                SELECT AVG(EXTRACT(EPOCH FROM ("endDate" - "startDate")) / 86400) 
+                SELECT AVG(EXTRACT(EPOCH FROM (end_date::timestamp - start_date::timestamp)) / 86400) 
                 FROM engagements 
-                WHERE status = 'COMPLETED' AND "endDate" IS NOT NULL
+                WHERE status = 'COMPLETED' AND end_date IS NOT NULL
             """)
-        ).scalar_one()
+        ).scalar_one_or_none()
         
         avg_completion_time_days = float(avg_days_result) if avg_days_result else 0.0
         
@@ -146,13 +146,13 @@ def get_engagements_trend(
         rows = db.execute(
             text("""
                 SELECT 
-                    TO_CHAR("createdAt", 'Month') as period,
+                    TO_CHAR(created_at, 'Month') as period,
                     COUNT(*) as total,
                     COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed
                 FROM engagements
-                WHERE "createdAt" >= NOW() - INTERVAL '6 months'
-                GROUP BY TO_CHAR("createdAt", 'Month'), EXTRACT(MONTH FROM "createdAt")
-                ORDER BY EXTRACT(MONTH FROM "createdAt")
+                WHERE created_at >= NOW() - INTERVAL '6 months'
+                GROUP BY TO_CHAR(created_at, 'Month'), EXTRACT(MONTH FROM created_at)
+                ORDER BY EXTRACT(MONTH FROM created_at)
             """)
         ).mappings().all()
         

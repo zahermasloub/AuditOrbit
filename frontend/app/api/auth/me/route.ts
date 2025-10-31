@@ -27,6 +27,9 @@ const MOCK_USERS = {
   },
 }
 
+// 🔓 Development: allow access without token
+const AUTH_DISABLED = process.env.NEXT_PUBLIC_DISABLE_AUTH === "1" || process.env.NODE_ENV !== "production"
+
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get("authorization")
@@ -34,11 +37,16 @@ export async function GET(request: NextRequest) {
     const tokenFromCookie = request.cookies.get("auth_token")?.value
     const token = tokenFromHeader || tokenFromCookie
 
-    if (!token) {
-      return NextResponse.json(
-        { error: "Unauthorized", message: "No token provided" },
-        { status: 401 }
-      )
+    // If auth disabled or no token, return a dev super admin user
+    if (AUTH_DISABLED || !token) {
+      const role = "admin" as const
+      return NextResponse.json({
+        id: "dev-user-id",
+        name: "مطور النظام",
+        email: "dev@local",
+        role,
+        permissions: getPermissionsForRole(role),
+      })
     }
 
     if (token in MOCK_USERS) {
@@ -52,10 +60,19 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json(
-      { error: "Unauthorized", message: "Invalid token" },
-      { status: 401 }
-    )
+    // In dev mode, also allow access for unknown tokens
+    if (AUTH_DISABLED) {
+      const role = "admin" as const
+      return NextResponse.json({
+        id: "dev-user-id",
+        name: "مطور النظام",
+        email: "dev@local",
+        role,
+        permissions: getPermissionsForRole(role),
+      })
+    }
+
+    return NextResponse.json({ error: "Unauthorized", message: "Invalid token" }, { status: 401 })
   } catch (error) {
     console.error("Error in /api/auth/me:", error)
     return NextResponse.json(

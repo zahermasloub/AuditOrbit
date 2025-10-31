@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Token Storage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1e293b;
+            color: white;
+        }
+        .section {
+            background: #334155;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+        pre {
+            background: #1e293b;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 فحص تخزين التوكن</h1>
+    
+    <div class="section">
+        <h2>التوكن الحالي</h2>
+        <button onclick="checkToken()">فحص التوكن</button>
+        <button onclick="clearToken()">حذف التوكن</button>
+        <pre id="tokenInfo">انقر على "فحص التوكن" للعرض</pre>
+    </div>
+    
+    <div class="section">
+        <h2>تسجيل الدخول</h2>
+        <input type="email" id="email" placeholder="البريد الإلكتروني" value="admin@example.com" style="width: 300px; padding: 8px; margin: 5px;">
+        <br>
+        <input type="password" id="password" placeholder="كلمة المرور" value="Admin#2025" style="width: 300px; padding: 8px; margin: 5px;">
+        <br>
+        <button onclick="testLogin()">تسجيل الدخول</button>
+        <pre id="loginResult"></pre>
+    </div>
+    
+    <div class="section">
+        <h2>إنشاء مستخدم</h2>
+        <input type="text" id="newName" placeholder="الاسم" value="Test User" style="width: 300px; padding: 8px; margin: 5px;">
+        <br>
+        <input type="email" id="newEmail" placeholder="البريد الإلكتروني" value="newuser@example.com" style="width: 300px; padding: 8px; margin: 5px;">
+        <br>
+        <input type="password" id="newPassword" placeholder="كلمة المرور" value="Pass1234!" style="width: 300px; padding: 8px; margin: 5px;">
+        <br>
+        <button onclick="testCreateUser()">إنشاء مستخدم</button>
+        <pre id="createResult"></pre>
+    </div>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+        
+        function checkToken() {
+            const token = localStorage.getItem('auth_token');
+            const accessToken = localStorage.getItem('access_token');
+            const refreshToken = localStorage.getItem('refresh_token');
+            const user = localStorage.getItem('user');
+            
+            const info = {
+                'auth_token': token ? token.substring(0, 50) + '...' : 'غير موجود',
+                'access_token': accessToken ? accessToken.substring(0, 50) + '...' : 'غير موجود',
+                'refresh_token': refreshToken ? refreshToken.substring(0, 50) + '...' : 'غير موجود',
+                'user': user ? JSON.parse(user) : 'غير موجود',
+                'all_keys': Object.keys(localStorage)
+            };
+            
+            document.getElementById('tokenInfo').textContent = JSON.stringify(info, null, 2);
+        }
+        
+        function clearToken() {
+            localStorage.clear();
+            document.getElementById('tokenInfo').textContent = 'تم حذف جميع البيانات';
+        }
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultEl = document.getElementById('loginResult');
+            
+            resultEl.textContent = 'جاري تسجيل الدخول...';
+            
+            try {
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.access_token) {
+                    localStorage.setItem('auth_token', data.access_token);
+                    if (data.refresh_token) {
+                        localStorage.setItem('refresh_token', data.refresh_token);
+                    }
+                    if (data.user) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                    }
+                    resultEl.textContent = '✅ تم تسجيل الدخول بنجاح!\n\n' + JSON.stringify(data, null, 2);
+                } else {
+                    resultEl.textContent = '❌ فشل: ' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultEl.textContent = '❌ خطأ: ' + error.message;
+            }
+        }
+        
+        async function testCreateUser() {
+            const name = document.getElementById('newName').value;
+            const email = document.getElementById('newEmail').value;
+            const password = document.getElementById('newPassword').value;
+            const resultEl = document.getElementById('createResult');
+            
+            const token = localStorage.getItem('auth_token');
+            
+            if (!token) {
+                resultEl.textContent = '❌ لم يتم العثور على توكن! سجل الدخول أولاً.';
+                return;
+            }
+            
+            resultEl.textContent = 'جاري إنشاء المستخدم...';
+            
+            try {
+                const response = await fetch(`${API_URL}/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        password,
+                        role: 'User',
+                        locale: 'ar'
+                    })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    resultEl.textContent = '❌ خطأ: ' + JSON.stringify(error, null, 2);
+                    return;
+                }
+                
+                const data = await response.json();
+                resultEl.textContent = '✅ تم إنشاء المستخدم بنجاح!\n\n' + JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultEl.textContent = '❌ خطأ: ' + error.message;
+            }
+        }
+        
+        // Check token on load
+        checkToken();
+    </script>
+</body>
+</html>

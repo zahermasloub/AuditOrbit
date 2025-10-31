@@ -39,7 +39,8 @@ const settingSchema = z.object({
 	key: z.string().min(1, "المفتاح مطلوب"),
 	value: z.string().min(1, "القيمة مطلوبة"),
 	group: z.string().min(1, "المجموعة مطلوبة"),
-	description: z.string().optional(),
+	// اجعل الوصف دائماً سلسلة نصية لتتوافق مع نوع SettingsItem
+	description: z.string().default(""),
 	isSecret: z.boolean(),
 })
 

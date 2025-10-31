@@ -380,7 +380,7 @@ export function FollowUpSection() {
                 {item.verificationStatus && (
                   <div>
                     <p className="text-slate-400 text-xs mb-1">حالة التحقق</p>
-                    <Badge variant="outline" className={getVerificationColor(item.verificationStatus)} size="sm">
+                    <Badge variant="outline" className={getVerificationColor(item.verificationStatus)}>
                       {item.verificationStatus}
                     </Badge>
                   </div>

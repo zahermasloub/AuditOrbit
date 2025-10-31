@@ -28,9 +28,12 @@ def check_engagements_table():
         
         # Check annual_plans
         print("\n📊 Annual plans:")
-        plans = db.execute(text("SELECT id, year, title, status FROM annual_plans")).fetchall()
-        for plan in plans:
-            print(f"  ID: {plan[0]}, Year: {plan[1]}, Title: {plan[2]}, Status: {plan[3]}")
+        try:
+            plans = db.execute(text("SELECT id, fiscalYear, title, status FROM annual_plans")).fetchall()
+            for plan in plans:
+                print(f"  ID: {plan[0]}, Year: {plan[1]}, Title: {plan[2]}, Status: {plan[3]}")
+        except Exception as e:
+            print(f"  Error fetching annual plans: {e}")
         
     except Exception as e:
         print(f"❌ Error: {e}")

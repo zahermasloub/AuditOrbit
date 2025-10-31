@@ -45,7 +45,7 @@
 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   LayoutDashboard,
   Users,
@@ -77,6 +77,7 @@ import {
   ShieldCheck,
   FileCheck,
   AlertCircle,
+  KeySquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -101,6 +102,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useToast } from "@/hooks/use-toast"
 import {
   Bar,
   BarChart,
@@ -130,6 +132,9 @@ import {
   useRolesList,
   useAuditLogs,
   useCreateUser,
+  useUpdateUser,
+  useDeleteUser,
+  useToggleUserStatus,
 } from "@/hooks/use-admin"
 
 // ============================================================================
@@ -141,6 +146,7 @@ export default function AdminPage() {
   // 📊 STATE MANAGEMENT
   // ============================================================================
 
+  const { toast } = useToast()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [activeSection, setActiveSection] = useState("dashboard")
   const [selectedPeriod, setSelectedPeriod] = useState("month")
@@ -148,6 +154,20 @@ export default function AdminPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([])
   const [showUserDialog, setShowUserDialog] = useState(false)
   const [showRoleDialog, setShowRoleDialog] = useState(false)
+  const [tokenWarning, setTokenWarning] = useState(false)
+  // User action dialogs state
+  const [selectedUser, setSelectedUser] = useState<any | null>(null)
+  const [showViewDetailsDialog, setShowViewDetailsDialog] = useState(false)
+  const [showEditUserDialog, setShowEditUserDialog] = useState(false)
+  const [showChangeRoleDialog, setShowChangeRoleDialog] = useState(false)
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false)
+  const [showDeleteConfirmDialog, setShowDeleteConfirmDialog] = useState(false)
+  // Form state for edit/change dialogs
+  const [editName, setEditName] = useState("")
+  const [editEmail, setEditEmail] = useState("")
+  const [editRole, setEditRole] = useState("User")
+  const [editActive, setEditActive] = useState(true)
+  const [newPassword, setNewPassword] = useState("")
   
   // Form state for new user
   const [newUserData, setNewUserData] = useState({
@@ -155,10 +175,30 @@ export default function AdminPage() {
     email: "",
     password: "",
     role: "User",
+    active: true,
   })
 
   // ============================================================================
-  // � DATA FETCHING - React Query Hooks
+  // 🔐 TOKEN CHECK - Check authentication on mount
+  // 🔓 المصادقة معطلة مؤقتاً للتطوير
+  // ============================================================================
+  
+  useEffect(() => {
+    // 🔓 تم تعطيل فحص التوكن مؤقتاً
+    // if (typeof window !== "undefined") {
+    //   const token = localStorage.getItem("auth_token") || localStorage.getItem("access_token");
+    //   if (!token) {
+    //     setTokenWarning(true);
+    //     console.warn("⚠️ No authentication token found. Please login again.");
+    //   } else {
+    //     console.log("✅ Authentication token found:", token.substring(0, 20) + "...");
+    //   }
+    // }
+    console.log("🔓 نظام المصادقة معطل مؤقتاً للتطوير");
+  }, [])
+
+  // ============================================================================
+  // 📊 DATA FETCHING - React Query Hooks
   // ============================================================================
   
   // Fetch data from API using custom hooks with fallback to mock data
@@ -173,6 +213,116 @@ export default function AdminPage() {
   
   // Create user mutation
   const createUserMutation = useCreateUser()
+  const updateUserMutation = useUpdateUser()
+  const deleteUserMutation = useDeleteUser()
+  const toggleUserStatusMutation = useToggleUserStatus()
+
+  // Helpers to open dialogs with selected user
+  const openViewDetails = (user: any) => {
+    setSelectedUser(user)
+    setShowViewDetailsDialog(true)
+  }
+  const openEditUser = (user: any) => {
+    setSelectedUser(user)
+    setEditName(user.name || "")
+    setEditEmail(user.email || "")
+    setEditRole(user.role || "User")
+    setEditActive(user.active !== false)
+    setShowEditUserDialog(true)
+  }
+  const openChangeRole = (user: any) => {
+    setSelectedUser(user)
+    setEditRole(user.role || "User")
+    setShowChangeRoleDialog(true)
+  }
+  const openResetPassword = (user: any) => {
+    setSelectedUser(user)
+    setNewPassword("")
+    setShowResetPasswordDialog(true)
+  }
+  const openDeleteConfirm = (user: any) => {
+    setSelectedUser(user)
+    setShowDeleteConfirmDialog(true)
+  }
+
+  // Action handlers wired to backend via hooks
+  const saveUserEdit = async () => {
+    if (!selectedUser) return
+    try {
+      await updateUserMutation.mutateAsync({
+        userId: selectedUser.id,
+        userData: {
+          name: editName,
+          email: editEmail,
+          role: editRole,
+          active: editActive,
+        },
+      })
+      setShowEditUserDialog(false)
+      setSelectedUser(null)
+      refetchUsers()
+      toast({ title: "تم التحديث", description: "تم تحديث بيانات المستخدم بنجاح" })
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "فشل في تحديث بيانات المستخدم"
+      toast({ title: "حدث خطأ", description: msg, variant: "destructive" })
+    }
+  }
+
+  const saveChangeRole = async () => {
+    if (!selectedUser) return
+    try {
+      await updateUserMutation.mutateAsync({
+        userId: selectedUser.id,
+        userData: { role: editRole },
+      })
+      setShowChangeRoleDialog(false)
+      setSelectedUser(null)
+      refetchUsers()
+      toast({ title: "تم التحديث", description: "تم تحديث دور المستخدم" })
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "فشل في تغيير الدور"
+      toast({ title: "حدث خطأ", description: msg, variant: "destructive" })
+    }
+  }
+
+  const saveResetPassword = async () => {
+    if (!selectedUser) return
+    if (!newPassword || newPassword.length < 8) {
+      toast({
+        title: "كلمة مرور غير صالحة",
+        description: "الرجاء إدخال كلمة مرور لا تقل عن 8 أحرف",
+        variant: "destructive"
+      })
+      return
+    }
+    try {
+      await updateUserMutation.mutateAsync({
+        userId: selectedUser.id,
+        userData: { password: newPassword },
+      })
+      setShowResetPasswordDialog(false)
+      setSelectedUser(null)
+      setNewPassword("")
+      toast({ title: "تم التحديث", description: "تم تحديث كلمة المرور بنجاح" })
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "فشل في تحديث كلمة المرور"
+      toast({ title: "حدث خطأ", description: msg, variant: "destructive" })
+    }
+  }
+
+  const confirmDeleteUser = async () => {
+    if (!selectedUser) return
+    try {
+      await deleteUserMutation.mutateAsync(selectedUser.id)
+      setShowDeleteConfirmDialog(false)
+      setSelectedUser(null)
+      refetchUsers()
+      toast({ title: "تم الحذف", description: "تم حذف المستخدم بنجاح" })
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "فشل في حذف المستخدم"
+      toast({ title: "حدث خطأ", description: msg, variant: "destructive" })
+    }
+  }
 
   // ============================================================================
   // �🗂️ MENU CONFIGURATION
@@ -460,18 +610,43 @@ export default function AdminPage() {
   // معالج إنشاء مستخدم جديد
   const handleCreateUser = async () => {
     if (!newUserData.name || !newUserData.email || !newUserData.password) {
-      alert("الرجاء ملء جميع الحقول المطلوبة")
+      toast({ 
+        title: "بيانات ناقصة", 
+        description: "الرجاء ملء جميع الحقول المطلوبة",
+        variant: "destructive"
+      })
       return
     }
+    
+    if (newUserData.password.length < 8) {
+      toast({ 
+        title: "كلمة مرور ضعيفة", 
+        description: "كلمة المرور يجب أن تكون 8 أحرف على الأقل",
+        variant: "destructive"
+      })
+      return
+    }
+    
+    console.log("🔓 إنشاء مستخدم بدون مصادقة (وضع التطوير)");
+    console.log("Creating user with data:", { ...newUserData, password: "***" });
     
     try {
       await createUserMutation.mutateAsync(newUserData)
       setShowUserDialog(false)
-      setNewUserData({ name: "", email: "", password: "", role: "User" })
+      setNewUserData({ name: "", email: "", password: "", role: "User", active: true })
       refetchUsers()
-      alert("تم إنشاء المستخدم بنجاح")
+      toast({ 
+        title: "تم الإنشاء بنجاح", 
+        description: `تم إنشاء المستخدم ${newUserData.name} بنجاح`
+      })
     } catch (error) {
-      alert(`خطأ: ${error instanceof Error ? error.message : "فشل في إنشاء المستخدم"}`)
+      console.error("Error creating user:", error);
+      const errorMessage = error instanceof Error ? error.message : "فشل في إنشاء المستخدم";
+      toast({ 
+        title: "حدث خطأ", 
+        description: errorMessage,
+        variant: "destructive"
+      })
     }
   }
 
@@ -481,6 +656,38 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex" dir="rtl">
+      {/* Token Warning Banner - 🔓 معطل مؤقتاً */}
+      {tokenWarning ? (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-red-600 text-white px-6 py-3 flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="h-5 w-5" />
+            <span className="font-medium">
+              ⚠️ لم يتم العثور على توكن المصادقة. يرجى تسجيل الدخول مرة أخرى.
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => window.location.href = "/login"}
+              className="px-4 py-1.5 bg-white text-red-600 rounded-lg font-medium hover:bg-red-50 transition-colors"
+            >
+              تسجيل الدخول
+            </button>
+            <button
+              onClick={() => window.location.href = "/debug-token"}
+              className="px-4 py-1.5 bg-red-700 text-white rounded-lg font-medium hover:bg-red-800 transition-colors"
+            >
+              فحص التوكن
+            </button>
+            <button
+              onClick={() => setTokenWarning(false)}
+              className="px-3 py-1.5 hover:bg-red-700 rounded-lg transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      ) : null}
+      
       {/* ========================================================================
           SIDEBAR
           ======================================================================== */}
@@ -950,17 +1157,17 @@ export default function AdminPage() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                        <TableHead className="text-slate-400 w-12">
+                        <TableHead className="text-slate-400 text-center w-12">
                           <Checkbox
                             checked={selectedUsers.length === users.length}
                             onCheckedChange={handleSelectAllUsers}
                           />
                         </TableHead>
-                        <TableHead className="text-slate-400">المستخدم</TableHead>
-                        <TableHead className="text-slate-400">الدور</TableHead>
-                        <TableHead className="text-slate-400">الحالة</TableHead>
-                        <TableHead className="text-slate-400">تاريخ الإنشاء</TableHead>
-                        <TableHead className="text-slate-400 text-left">الإجراءات</TableHead>
+                        <TableHead className="text-slate-400 text-right w-[35%]">المستخدم</TableHead>
+                        <TableHead className="text-slate-400 text-center w-[15%]">الدور</TableHead>
+                        <TableHead className="text-slate-400 text-center w-[12%]">الحالة</TableHead>
+                        <TableHead className="text-slate-400 text-center w-[18%]">تاريخ الإنشاء</TableHead>
+                        <TableHead className="text-slate-400 text-center w-[12%]">الإجراءات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -973,7 +1180,7 @@ export default function AdminPage() {
                       ) : (
                         users.map((user) => (
                           <TableRow key={user.id} className="border-slate-800 hover:bg-slate-800/50">
-                            <TableCell>
+                            <TableCell className="text-center">
                               <Checkbox
                                 checked={selectedUsers.includes(user.id)}
                                 onCheckedChange={() => handleSelectUser(user.id)}
@@ -981,66 +1188,125 @@ export default function AdminPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                                   {user.name.charAt(0).toUpperCase()}
                                 </div>
-                                <div>
-                                  <p className="text-white font-medium">{user.name}</p>
-                                  <p className="text-slate-400 text-sm">{user.email}</p>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-white font-medium truncate">{user.name}</p>
+                                  <p className="text-slate-400 text-sm truncate">{user.email}</p>
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-500/10">
-                                {user.role || "User"}
-                              </Badge>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center">
+                                <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-500/10 whitespace-nowrap">
+                                  {user.role || "User"}
+                                </Badge>
+                              </div>
                             </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={user.active !== false ? "default" : "secondary"}
-                                className={
-                                  user.active !== false
-                                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-                                    : "bg-slate-700 text-slate-300 border-slate-600"
-                                }
-                              >
-                                {user.active !== false ? "نشط" : "معلق"}
-                              </Badge>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center">
+                                <Badge
+                                  variant={user.active !== false ? "default" : "secondary"}
+                                  className={
+                                    user.active !== false
+                                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 whitespace-nowrap"
+                                      : "bg-slate-700 text-slate-300 border-slate-600 whitespace-nowrap"
+                                  }
+                                >
+                                  {user.active !== false ? "نشط" : "معلق"}
+                                </Badge>
+                              </div>
                             </TableCell>
-                            <TableCell className="text-slate-400 text-sm">
+                            <TableCell className="text-center text-slate-400 text-sm whitespace-nowrap">
                               {user.created_at ? new Date(user.created_at).toLocaleDateString("ar-SA") : "غير محدد"}
                             </TableCell>
-                            <TableCell className="text-left">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-slate-400 hover:text-white hover:bg-slate-800"
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center">
+                                <DropdownMenu modal={false}>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="text-slate-400 hover:text-white hover:bg-slate-800"
+                                    >
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="bg-slate-900 border-slate-800">
-                                  <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
+                                  <DropdownMenuItem 
+                                    className="text-slate-300 focus:bg-slate-800 focus:text-white cursor-pointer"
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                      setTimeout(() => openViewDetails(user), 0)
+                                    }}
+                                  >
                                     <Eye className="h-4 w-4 ml-2" />
                                     عرض التفاصيل
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
+                                  <DropdownMenuItem 
+                                    className="text-slate-300 focus:bg-slate-800 focus:text-white cursor-pointer"
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                      setTimeout(() => openEditUser(user), 0)
+                                    }}
+                                  >
                                     <Edit className="h-4 w-4 ml-2" />
                                     تعديل
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem className="text-slate-300 focus:bg-slate-800 focus:text-white">
+                                  <DropdownMenuItem 
+                                    className="text-slate-300 focus:bg-slate-800 focus:text-white cursor-pointer"
+                                    onSelect={async (e) => {
+                                      e.preventDefault()
+                                      try {
+                                        await toggleUserStatusMutation.mutateAsync({
+                                          userId: user.id,
+                                          active: !user.active
+                                        })
+                                        toast({ title: "تم التحديث", description: `تم ${!user.active ? 'تفعيل' : 'تعطيل'} الحساب بنجاح` })
+                                      } catch (error) {
+                                        const msg = error instanceof Error ? error.message : 'فشل في تحديث حالة الحساب'
+                                        toast({ title: "حدث خطأ", description: msg, variant: "destructive" })
+                                      }
+                                    }}
+                                  >
+                                    {user.active ? <XCircle className="h-4 w-4 ml-2" /> : <CheckCircle2 className="h-4 w-4 ml-2" />}
+                                    {user.active ? 'تعطيل الحساب' : 'تفعيل الحساب'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-slate-300 focus:bg-slate-800 focus:text-white cursor-pointer"
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                      setTimeout(() => openChangeRole(user), 0)
+                                    }}
+                                  >
                                     <Shield className="h-4 w-4 ml-2" />
-                                    تغيير الصلاحيات
+                                    تغيير الدور
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-slate-300 focus:bg-slate-800 focus:text-white cursor-pointer"
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                      setTimeout(() => openResetPassword(user), 0)
+                                    }}
+                                  >
+                                    <KeySquare className="h-4 w-4 ml-2" />
+                                    إعادة تعيين كلمة المرور
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator className="bg-slate-800" />
-                                  <DropdownMenuItem className="text-red-400 focus:bg-red-500/10 focus:text-red-300">
+                                  <DropdownMenuItem 
+                                    className="text-red-400 focus:bg-red-500/10 focus:text-red-300 cursor-pointer"
+                                    onSelect={(e) => {
+                                      e.preventDefault()
+                                      setTimeout(() => openDeleteConfirm(user), 0)
+                                    }}
+                                  >
                                     <Trash2 className="h-4 w-4 ml-2" />
                                     حذف
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
-                              </DropdownMenu>
+                                </DropdownMenu>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -1368,13 +1634,30 @@ export default function AdminPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="active" className="text-slate-300">
+                حالة الحساب
+              </Label>
+              <Select 
+                value={newUserData.active ? "active" : "inactive"}
+                onValueChange={(value) => setNewUserData({ ...newUserData, active: value === "active" })}
+              >
+                <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                  <SelectValue placeholder="اختر الحالة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">🟢 نشط</SelectItem>
+                  <SelectItem value="inactive">🔴 غير نشط</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button
               variant="outline"
               onClick={() => {
                 setShowUserDialog(false)
-                setNewUserData({ name: "", email: "", password: "", role: "User" })
+                setNewUserData({ name: "", email: "", password: "", role: "User", active: true })
               }}
               className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
               disabled={createUserMutation.isPending}
@@ -1387,6 +1670,224 @@ export default function AdminPage() {
               disabled={createUserMutation.isPending}
             >
               {createUserMutation.isPending ? "جاري الإضافة..." : "إضافة"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Dialog */}
+      <Dialog open={showViewDetailsDialog} onOpenChange={setShowViewDetailsDialog}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">تفاصيل المستخدم</DialogTitle>
+            <DialogDescription className="text-slate-400">معلومات كاملة عن المستخدم</DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-6 py-2">
+              <div className="flex items-center gap-4 p-4 bg-slate-800/50 rounded-lg">
+                <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold text-2xl">
+                  {selectedUser.name?.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-white">{selectedUser.name}</h3>
+                  <p className="text-slate-400">{selectedUser.email}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant="outline" className="border-indigo-500/30 text-indigo-300 bg-indigo-500/10">
+                      {selectedUser.role || 'User'}
+                    </Badge>
+                    <Badge
+                      variant={selectedUser.active !== false ? 'default' : 'secondary'}
+                      className={selectedUser.active !== false ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-slate-700 text-slate-300 border-slate-600'}
+                    >
+                      {selectedUser.active !== false ? 'نشط' : 'معلق'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-slate-800/50 rounded-lg">
+                  <p className="text-slate-400 text-sm">تاريخ الإنشاء</p>
+                  <p className="text-white text-sm">{selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleString('ar-SA') : 'غير محدد'}</p>
+                </div>
+                <div className="p-3 bg-slate-800/50 rounded-lg">
+                  <p className="text-slate-400 text-sm">اللغة</p>
+                  <p className="text-white text-sm">{selectedUser.locale || 'ar'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              onClick={() => setShowViewDetailsDialog(false)}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 hover:from-indigo-700 hover:to-purple-700"
+            >
+              إغلاق
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={showEditUserDialog} onOpenChange={setShowEditUserDialog}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white">
+          <DialogHeader>
+            <DialogTitle>تعديل بيانات المستخدم</DialogTitle>
+            <DialogDescription className="text-slate-400">تحديث معلومات المستخدم</DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name" className="text-slate-300">الاسم الكامل</Label>
+                <Input id="edit-name" className="bg-slate-800 border-slate-700 text-white" value={editName} onChange={(e) => setEditName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email" className="text-slate-300">البريد الإلكتروني</Label>
+                <Input id="edit-email" type="email" className="bg-slate-800 border-slate-700 text-white" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-role" className="text-slate-300">الدور</Label>
+                <Select value={editRole} onValueChange={(v) => setEditRole(v)}>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="User">مستخدم</SelectItem>
+                    <SelectItem value="Admin">مدير</SelectItem>
+                    <SelectItem value="Auditor">مدقق</SelectItem>
+                    <SelectItem value="Manager">مدير تدقيق</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-300">حالة الحساب</Label>
+                <Select value={editActive ? 'active' : 'inactive'} onValueChange={(v) => setEditActive(v === 'active')}>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">🟢 نشط</SelectItem>
+                    <SelectItem value="inactive">🔴 غير نشط</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditUserDialog(false)}
+              className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+            >
+              إلغاء
+            </Button>
+            <Button onClick={saveUserEdit} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 hover:from-indigo-700 hover:to-purple-700">
+              حفظ التغييرات
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Dialog */}
+      <Dialog open={showChangeRoleDialog} onOpenChange={setShowChangeRoleDialog}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white">
+          <DialogHeader>
+            <DialogTitle>تغيير الدور</DialogTitle>
+            <DialogDescription className="text-slate-400">تحديد الدور الأساسي للمستخدم</DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label className="text-slate-300">الدور</Label>
+                <Select value={editRole} onValueChange={(v) => setEditRole(v)}>
+                  <SelectTrigger className="bg-slate-800 border-slate-700 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="User">مستخدم</SelectItem>
+                    <SelectItem value="Admin">مدير</SelectItem>
+                    <SelectItem value="Auditor">مدقق</SelectItem>
+                    <SelectItem value="Manager">مدير تدقيق</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowChangeRoleDialog(false)}
+              className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+            >
+              إلغاء
+            </Button>
+            <Button onClick={saveChangeRole} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 hover:from-indigo-700 hover:to-purple-700">
+              حفظ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={showResetPasswordDialog} onOpenChange={setShowResetPasswordDialog}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white">
+          <DialogHeader>
+            <DialogTitle>إعادة تعيين كلمة المرور</DialogTitle>
+            <DialogDescription className="text-slate-400">أدخل كلمة المرور الجديدة</DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label htmlFor="new-pass" className="text-slate-300">كلمة المرور الجديدة</Label>
+                <Input id="new-pass" type="password" className="bg-slate-800 border-slate-700 text-white" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowResetPasswordDialog(false)}
+              className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+            >
+              إلغاء
+            </Button>
+            <Button onClick={saveResetPassword} className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 hover:from-indigo-700 hover:to-purple-700">
+              حفظ
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={showDeleteConfirmDialog} onOpenChange={setShowDeleteConfirmDialog}>
+        <DialogContent className="bg-slate-900 border-slate-800 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-red-400 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              تأكيد الحذف
+            </DialogTitle>
+            <DialogDescription className="text-slate-400">هذا الإجراء لا يمكن التراجع عنه</DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="py-2">
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                <p className="text-white mb-2">
+                  هل أنت متأكد من حذف المستخدم <span className="font-bold">{selectedUser.name}</span>؟
+                </p>
+                <p className="text-slate-400 text-sm">سيتم حذف جميع البيانات المرتبطة بهذا المستخدم.</p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirmDialog(false)}
+              className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-white bg-transparent"
+            >
+              إلغاء
+            </Button>
+            <Button onClick={confirmDeleteUser} className="bg-red-600 text-white border-0 hover:bg-red-700">
+              <Trash2 className="h-4 w-4 ml-2" />
+              حذف نهائياً
             </Button>
           </DialogFooter>
         </DialogContent>

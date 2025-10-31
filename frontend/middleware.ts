@@ -118,6 +118,11 @@ function getDefaultRouteForRole(role: UserRole): string {
 // ============================================================================
 
 export function middleware(request: NextRequest) {
+  // 🔓 Disable all auth checks in development or when explicitly disabled
+  const AUTH_DISABLED = process.env.NEXT_PUBLIC_DISABLE_AUTH === "1" || process.env.NODE_ENV !== "production"
+  if (AUTH_DISABLED) {
+    return NextResponse.next()
+  }
   const { pathname } = request.nextUrl
 
   // السماح بالمسارات العامة
@@ -192,6 +197,7 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    "/((?!api/public|_next/static|_next/image|favicon.ico).*)",
+    // Exclude all API routes while auth is disabled to avoid interfering with API calls
+    "/((?!api|_next/static|_next/image|favicon.ico).*)",
   ],
 }

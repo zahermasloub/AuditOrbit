@@ -42,10 +42,10 @@ try:
             email, 
             name, 
             role,
-            created_at,
-            updated_at
+            "createdAt",
+            "updatedAt"
         FROM users 
-        ORDER BY created_at DESC
+        ORDER BY "createdAt" DESC
     """)
     
     users = cursor.fetchall()
@@ -71,7 +71,7 @@ try:
         print("🔐 ملاحظة: كلمات المرور مخزنة بشكل مشفر (hashed)")
         print("=" * 80)
         
-        cursor.execute("SELECT email, hashed_password FROM users LIMIT 3")
+        cursor.execute('SELECT email, password FROM users LIMIT 3')
         pwd_samples = cursor.fetchall()
         
         for email, pwd_hash in pwd_samples:
