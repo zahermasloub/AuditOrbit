@@ -1,6 +1,6 @@
 """Add required columns and RBAC tables
 
-Revision ID: 0012_add_required_columns_and_rbac
+Revision ID: 0012_req_cols_rbac
 Revises: 0011_wp_samples_crud_and_indexes
 Create Date: 2025-10-31
 """
@@ -11,7 +11,7 @@ from sqlalchemy.exc import NoSuchTableError
 from typing import Any
 
 
-revision = "0012_add_required_columns_and_rbac"
+revision = "0012_req_cols_rbac"
 down_revision = "0011_wp_samples_crud_and_indexes"
 branch_labels = None
 depends_on = None
