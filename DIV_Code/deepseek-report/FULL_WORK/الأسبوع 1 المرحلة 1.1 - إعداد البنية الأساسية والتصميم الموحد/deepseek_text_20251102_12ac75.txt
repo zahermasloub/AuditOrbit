@@ -1,0 +1,19 @@
+src/
+├── design-system/
+│   ├── theme.js
+│   └── index.js
+├── components/
+│   ├── core/
+│   │   ├── Button.jsx
+│   │   ├── Card.jsx
+│   │   ├── Input.jsx
+│   │   └── index.js
+│   └── layout/
+│       ├── AppLayout.jsx
+│       ├── Sidebar.jsx
+│       ├── Header.jsx
+│       └── index.js
+└── pages/
+    ├── _app.js
+    ├── _document.js
+    └── index.js
