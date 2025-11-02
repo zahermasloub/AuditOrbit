@@ -1,0 +1,223 @@
+🎯 **مهمة Copilot:** تنفيذ المرحلة 1.2 - دمج واجهات التقارير والمشاريع
+
+## 📝 **تفاصيل المهمة:**
+**الفترة:** الأسبوع الثاني
+**الهدف:** دمج الصفحات المكررة (التقارير، المشاريع) مع الحفاظ على التصميم
+**المخرجات:** واجهات موحدة للتقارير والمشاريع
+
+## 🔧 **الخطوات التنفيذية:**
+
+### 1. إنشاء مكون التقارير الموحد مع التصميم الحالي
+```jsx
+// src/shared/components/UnifiedReports.jsx
+import React, { useState, useEffect } from 'react';
+import UICard from './UICard';
+import UIButton from './UIButton';
+import UITabs from './UITabs';
+import UITypography from './UITypography';
+import { USER_ROLES, PERMISSIONS } from '../../utils/constants/roles';
+import { checkPermission } from '../../utils/permissionUtils';
+
+const UnifiedReports = ({ userRole, userPermissions }) => {
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [activeView, setActiveView] = useState('all');
+
+  // محاكاة بيانات التقارير حسب الدور
+  const mockReportsData = {
+    admin: [
+      { id: 1, title: 'تقرير التدقيق الشهري', status: 'مكتمل', assignedTo: 'مدير 1', createdBy: 'مدقق 1', createdAt: '2025-01-15', priority: 'عادي' },
+      { id: 2, title: 'تقرير المتابعة', status: 'بانتظار المراجعة', assignedTo: 'مدير 2', createdBy: 'مدقق 2', createdAt: '2025-01-10', priority: 'عالي' },
+    ],
+    manager: [
+      { id: 1, title: 'تقرير التدقيق الشهري', status: 'مكتمل', assignedTo: 'مدير 1', createdBy: 'مدقق 1', createdAt: '2025-01-15', priority: 'عادي' },
+      { id: 3, title: 'تقرير الأداء', status: 'قيد التنفيذ', assignedTo: 'مدير 1', createdBy: 'مدقق 3', createdAt: '2025-01-08', priority: 'متوسط' },
+    ],
+    auditor: [
+      { id: 4, title: 'تقرير المتابعة الدورية', status: 'مسودة', assignedTo: 'مدير 1', createdBy: 'مدقق 1', createdAt: '2025-01-12', priority: 'عادي' },
+    ]
+  };
+
+  useEffect(() => {
+    loadReports();
+  }, [activeView, userRole]);
+
+  const loadReports = async () => {
+    setLoading(true);
+    try {
+      // محاكاة جلب البيانات من API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const data = mockReportsData[userRole] || [];
+      
+      // تطبيق الفلترة حسب العرض النشط
+      const filteredData = filterReportsByView(data, activeView);
+      setReports(filteredData);
+    } catch (error) {
+      console.error('Error loading reports:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterReportsByView = (data, view) => {
+    switch(view) {
+      case 'pending':
+        return data.filter(report => report.status === 'بانتظار المراجعة');
+      case 'in-progress':
+        return data.filter(report => report.status === 'قيد التنفيذ');
+      case 'completed':
+        return data.filter(report => report.status === 'مكتمل');
+      default:
+        return data;
+    }
+  };
+
+  const getTabsConfig = () => {
+    const baseTabs = [
+      { id: 'all', label: 'جميع التقارير', content: renderReportsList() }
+    ];
+
+    if (checkPermission(userPermissions, PERMISSIONS.REPORTS.APPROVE)) {
+      baseTabs.push({ id: 'pending', label: 'بانتظار المراجعة', content: renderReportsList() });
+    }
+
+    baseTabs.push(
+      { id: 'in-progress', label: 'قيد التنفيذ', content: renderReportsList() },
+      { id: 'completed', label: 'مكتمل', content: renderReportsList() }
+    );
+
+    return baseTabs;
+  };
+
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      'مكتمل': { color: '#22c55e', bgColor: '#f0fdf4' },
+      'بانتظار المراجعة': { color: '#f59e0b', bgColor: '#fffbeb' },
+      'قيد التنفيذ': { color: '#3b82f6', bgColor: '#eff6ff' },
+      'مسودة': { color: '#6b7280', bgColor: '#f3f4f6' }
+    };
+
+    const config = statusConfig[status] || { color: '#6b7280', bgColor: '#f3f4f6' };
+
+    return (
+      <span style={{
+        padding: '4px 8px',
+        borderRadius: '12px',
+        fontSize: '0.75rem',
+        fontWeight: '500',
+        color: config.color,
+        backgroundColor: config.bgColor,
+        border: `1px solid ${config.color}20`
+      }}>
+        {status}
+      </span>
+    );
+  };
+
+  const getPriorityBadge = (priority) => {
+    const priorityConfig = {
+      'عالي': { color: '#dc2626', bgColor: '#fef2f2' },
+      'متوسط': { color: '#f59e0b', bgColor: '#fffbeb' },
+      'عادي': { color: '#16a34a', bgColor: '#f0fdf4' }
+    };
+
+    const config = priorityConfig[priority] || { color: '#6b7280', bgColor: '#f3f4f6' };
+
+    return (
+      <span style={{
+        padding: '2px 6px',
+        borderRadius: '8px',
+        fontSize: '0.7rem',
+        fontWeight: '500',
+        color: config.color,
+        backgroundColor: config.bgColor
+      }}>
+        {priority}
+      </span>
+    );
+  };
+
+  const renderReportsList = () => {
+    if (loading) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px' }}>
+          <div>جاري تحميل التقارير...</div>
+        </div>
+      );
+    }
+
+    if (reports.length === 0) {
+      return (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#6b7280' }}>
+          <UITypography variant="body1">لا توجد تقارير لعرضها</UITypography>
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {reports.map(report => (
+          <UICard key={report.id} variant="elevated" padding="medium">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                  <UITypography variant="h3" style={{ margin: 0 }}>{report.title}</UITypography>
+                  {getPriorityBadge(report.priority)}
+                </div>
+                
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>الحالة:</span>
+                    {getStatusBadge(report.status)}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>المسند إلى:</span>
+                    <span style={{ fontSize: '0.875rem', fontWeight: '500' }}>{report.assignedTo}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ fontSize: '0.875rem', color: '#6b7280' }}>التاريخ:</span>
+                    <span style={{ fontSize: '0.875rem' }}>{report.createdAt}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <UIButton variant="ghost" size="small">
+                  عرض
+                </UIButton>
+                {checkPermission(userPermissions, PERMISSIONS.REPORTS.APPROVE) && report.status === 'بانتظار المراجعة' && (
+                  <UIButton variant="primary" size="small">
+                    مراجعة
+                  </UIButton>
+                )}
+              </div>
+            </div>
+          </UICard>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ padding: '24px' }}>
+      <div style={{ marginBottom: '24px' }}>
+        <UITypography variant="h1" style={{ marginBottom: '8px' }}>
+          التقارير
+        </UITypography>
+        <UITypography variant="body2" style={{ color: '#6b7280' }}>
+          إدارة وعرض جميع تقارير التدقيق في مكان واحد
+        </UITypography>
+      </div>
+
+      <UICard variant="elevated" padding="large">
+        <UITabs
+          tabs={getTabsConfig()}
+          defaultActiveTab={0}
+          onTabChange={(index, tab) => setActiveView(tab.id)}
+        />
+      </UICard>
+    </div>
+  );
+};
+
+export default UnifiedReports;
