@@ -110,8 +110,9 @@ export function EngagementsSection() {
     objectives: "",
     scope: "",
     criteria: "",
-    annualPlanId: "1",
+    annualPlanId: "",
   })
+  const [activePlan, setActivePlan] = useState<{ id: string; year: number; title: string } | null>(null)
 
   const checkVacationConflict = (startDate: string, endDate: string) => {
     if (!startDate || !endDate) return false
@@ -146,6 +147,11 @@ export function EngagementsSection() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (!newEngagement.annualPlanId) {
+      alert("الرجاء اختيار الخطة السنوية الفعالة. إن لم تكن موجودة، يرجى إنشاء خطة سنوية أولاً.")
+      return
+    }
     
     if (vacationWarning) {
       alert("لا يمكن حفظ المهمة: التواريخ المحددة تتعارض مع فترة الإجازة السنوية")
@@ -173,7 +179,7 @@ export function EngagementsSection() {
       objectives: "",
       scope: "",
       criteria: "",
-      annualPlanId: "1",
+      annualPlanId: "",
     })
     setSelectedAuditors([])
     setVacationWarning(false)
@@ -219,7 +225,32 @@ export function EngagementsSection() {
           <h2 className="text-2xl font-bold text-slate-100">المهام التدقيقية</h2>
           <p className="text-slate-400 mt-1">إدارة مهام التدقيق والمراجعة</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (open) {
+            // Lazy-load active plan when dialog opens
+            try {
+              const getCookie = (name: string) => document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1]
+              const token = typeof document !== 'undefined' ? getCookie('auth_token') : undefined
+              const base = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
+              const url = `${base}/annual-plans/active`
+              fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then((plan) => {
+                  if (plan?.id && plan?.year && plan?.title) {
+                    setActivePlan({ id: plan.id, year: plan.year, title: plan.title })
+                    setNewEngagement(prev => ({ ...prev, annualPlanId: plan.id }))
+                  } else if (plan?.year && plan?.title) {
+                    // Fallback plan without ID - show but don't allow submission
+                    setActivePlan({ id: '', year: plan.year, title: plan.title })
+                  }
+                })
+                .catch(() => { 
+                  // Silent failure - user will see "لا توجد خطة فعالة"
+                })
+            } catch { /* silent */ }
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700">
               <Plus className="h-4 w-4 ml-2" />
@@ -241,6 +272,33 @@ export function EngagementsSection() {
                   معلومات المهمة
                 </h3>
                 
+                <div className="space-y-2">
+                  <Label htmlFor="annualPlan" className="text-slate-300">الخطة السنوية الفعالة *</Label>
+                  <Select
+                    value={newEngagement.annualPlanId}
+                    onValueChange={(value) => setNewEngagement({ ...newEngagement, annualPlanId: value })}
+                    disabled={!activePlan?.id}
+                  >
+                    <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
+                      <SelectValue placeholder={activePlan ? `${activePlan.title} (${activePlan.year})` : "جارٍ التحميل..."} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {activePlan?.id ? (
+                        <SelectItem value={activePlan.id} className="text-slate-100">
+                          {activePlan.title} ({activePlan.year})
+                        </SelectItem>
+                      ) : (
+                        <SelectItem value="__no_plan__" disabled className="text-slate-400">
+                          لا توجد خطة فعالة - يرجى إنشاء خطة أولاً
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  {!activePlan?.id && (
+                    <p className="text-xs text-amber-400">يرجى إنشاء خطة سنوية قبل إضافة مهام تدقيقية</p>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="title" className="text-slate-300">اسم المهمة *</Label>
                   <Input

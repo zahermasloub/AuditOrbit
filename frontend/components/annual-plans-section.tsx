@@ -46,14 +46,7 @@ interface AnnualPlan {
   createdAt: string
 }
 
-const mockDepartments: Department[] = [
-  { id: "1", name: "الإدارة المالية" },
-  { id: "2", name: "إدارة الموارد البشرية" },
-  { id: "3", name: "إدارة تقنية المعلومات" },
-  { id: "4", name: "إدارة المشتريات" },
-  { id: "5", name: "إدارة العمليات" },
-  { id: "6", name: "إدارة المبيعات" },
-]
+// سيتم تحميل الإدارات من واجهة API
 
 const mockPlans: AnnualPlan[] = [
   {
@@ -79,6 +72,7 @@ export function AnnualPlansSection() {
   const [plans, setPlans] = useState<AnnualPlan[]>(mockPlans)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
   const [newPlan, setNewPlan] = useState({
     title: "",
     description: "",
@@ -91,8 +85,11 @@ export function AnnualPlansSection() {
   })
 
   const handleAddDepartment = (deptId: string) => {
-    const dept = mockDepartments.find(d => d.id === deptId)
-    if (dept && !selectedDepartments.find(d => d.id === deptId)) {
+    // تجاهل القيم الفارغة أو الخاصة (placeholders)
+    if (!deptId || deptId.startsWith('__')) return
+    
+    const dept = departments.find((d: Department) => d.id === deptId)
+    if (dept && !selectedDepartments.find((d: Department) => d.id === deptId)) {
       setSelectedDepartments([...selectedDepartments, { ...dept, priority: 'medium' }])
     }
   }
@@ -160,7 +157,29 @@ export function AnnualPlansSection() {
           <h2 className="text-2xl font-bold text-slate-100">الخطط السنوية</h2>
           <p className="text-slate-400 mt-1">إدارة خطط التدقيق السنوية</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open)
+          if (open) {
+            try {
+              const getCookie = (name: string) => document.cookie.split('; ').find(r => r.startsWith(name + '='))?.split('=')[1]
+              const token = typeof document !== 'undefined' ? getCookie('auth_token') : undefined
+              const base = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '')
+              const url = `${base}/departments`
+              fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+                .then(r => r.ok ? r.json() : Promise.reject(r))
+                .then((items) => {
+                  if (Array.isArray(items)) {
+                    setDepartments(
+                      items
+                        .filter((d: any) => d && typeof d.id === "string" && d.id.trim() !== "" && typeof d.name === "string")
+                        .map((d: any) => ({ id: d.id, name: d.name }))
+                    )
+                  }
+                })
+                .catch(() => { /* silent */ })
+            } catch { /* silent */ }
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700">
               <Plus className="h-4 w-4 ml-2" />
@@ -255,13 +274,23 @@ export function AnnualPlansSection() {
                       <SelectValue placeholder="اختر إدارة..." />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-800 border-slate-700">
-                      {mockDepartments
-                        .filter(dept => !selectedDepartments.find(d => d.id === dept.id))
-                        .map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id} className="text-slate-100">
-                            {dept.name}
-                          </SelectItem>
-                        ))}
+                      {departments.length === 0 ? (
+                        <SelectItem value="__loading__" disabled className="text-slate-400">
+                          جاري التحميل...
+                        </SelectItem>
+                      ) : departments.filter((dept: Department) => !selectedDepartments.find((d: Department) => d.id === dept.id)).length === 0 ? (
+                        <SelectItem value="__empty__" disabled className="text-slate-400">
+                          تم تحديد جميع الإدارات
+                        </SelectItem>
+                      ) : (
+                        departments
+                          .filter((dept: Department) => dept?.id && !selectedDepartments.find((d: Department) => d.id === dept.id))
+                          .map((dept: Department) => (
+                            <SelectItem key={dept.id} value={dept.id} className="text-slate-100">
+                              {dept.name}
+                            </SelectItem>
+                          ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -276,7 +305,7 @@ export function AnnualPlansSection() {
                         <div className="flex items-center gap-2">
                           <Label className="text-xs text-slate-400">الأولوية:</Label>
                           <Select
-                            value={dept.priority}
+                            value={dept.priority || 'medium'}
                             onValueChange={(value: 'high' | 'medium' | 'low') => 
                               handlePriorityChange(dept.id, value)
                             }

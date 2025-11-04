@@ -30,6 +30,8 @@ from .routers import (
   roles,
   users,
   wp,
+  departments,
+  annual_plans,
 )
 
 app = FastAPI(title="AuditOrbit API", version="0.2.0", docs_url="/docs", redoc_url="/redoc", debug=True)
@@ -93,7 +95,9 @@ app.include_router(notifications.router, tags=["notifications"])
 app.include_router(wp.router)
 app.include_router(samples.router)
 app.include_router(followups.router)
-app.include_router(audit.router, tags=["audit"])
+app.include_router(audit.router, tags=["audit"]) 
+app.include_router(departments.router, prefix="/departments", tags=["departments"]) 
+app.include_router(annual_plans.router, prefix="/annual-plans", tags=["annual-plans"]) 
 
 
 @app.get("/health", tags=["ops"])
