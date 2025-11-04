@@ -34,12 +34,12 @@ class SqlAlchemyUserRepository(UserRepository):
                     u.locale,
                     u.tz AS timezone,
                     u.active,
-                    to_char(u."createdAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
-                    to_char(u."updatedAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
+                    to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
+                    to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
                 FROM users u
-                LEFT JOIN user_roles ur ON u.id = ur."userId"
-                LEFT JOIN roles r ON ur."roleId" = r.id
-                ORDER BY u."createdAt" DESC
+                LEFT JOIN user_roles ur ON u.id = ur.user_id
+                LEFT JOIN roles r ON ur.role_id = r.id
+                ORDER BY u.created_at DESC
                 OFFSET :offset LIMIT :limit
                 """
             ),
@@ -60,11 +60,11 @@ class SqlAlchemyUserRepository(UserRepository):
                     u.locale,
                     u.tz AS timezone,
                     u.active,
-                    to_char(u."createdAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
-                    to_char(u."updatedAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
+                    to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
+                    to_char(u.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
                 FROM users u
-                LEFT JOIN user_roles ur ON u.id = ur."userId"
-                LEFT JOIN roles r ON ur."roleId" = r.id
+                LEFT JOIN user_roles ur ON u.id = ur.user_id
+                LEFT JOIN roles r ON ur.role_id = r.id
                 WHERE u.id::text = :user_id
                 LIMIT 1
                 """
@@ -77,8 +77,8 @@ class SqlAlchemyUserRepository(UserRepository):
         result = self._session.execute(
             text(
                 """
-                INSERT INTO users (email, name, password, locale, tz, active, "createdAt", "updatedAt")
-                VALUES (:email, :name, :password, :locale, :timezone, :active, now(), now())
+                INSERT INTO users (email, name, hashed_password, locale, tz, active, created_at)
+                VALUES (:email, :name, :password, :locale, :timezone, :active, now())
                 RETURNING
                     id::text AS id,
                     email,
@@ -87,8 +87,8 @@ class SqlAlchemyUserRepository(UserRepository):
                     locale,
                     tz AS timezone,
                     active,
-                    to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
-                    to_char("updatedAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
+                    to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
+                    to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
                 """
             ),
             {
@@ -116,7 +116,7 @@ class SqlAlchemyUserRepository(UserRepository):
             update_fields.append("email = :email")
             params["email"] = data.email
         if data.hashed_password is not None:
-            update_fields.append("password = :password")
+            update_fields.append("hashed_password = :password")
             params["password"] = data.hashed_password
         if data.locale is not None:
             update_fields.append("locale = :locale")
@@ -131,8 +131,6 @@ class SqlAlchemyUserRepository(UserRepository):
         if not update_fields:
             raise ValueError("No mutable fields were provided")
 
-        update_fields.append('"updatedAt" = now()')
-
         query = f"""
             UPDATE users
             SET {', '.join(update_fields)}
@@ -145,8 +143,8 @@ class SqlAlchemyUserRepository(UserRepository):
                 locale,
                 tz AS timezone,
                 active,
-                to_char("createdAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
-                to_char("updatedAt", 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
+                to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at,
+                to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS updated_at
         """
         result = self._session.execute(text(query), params).mappings().first()
         if result is None:
@@ -166,7 +164,7 @@ class SqlAlchemyUserRepository(UserRepository):
 
     def replace_role(self, user_id: str, role_name: Optional[str]) -> Optional[str]:
         self._session.execute(
-            text('DELETE FROM user_roles WHERE "userId"::text = :user_id'), {"user_id": user_id}
+            text('DELETE FROM user_roles WHERE user_id::text = :user_id'), {"user_id": user_id}
         )
         assigned_role: Optional[str] = None
         if role_name:
@@ -175,7 +173,7 @@ class SqlAlchemyUserRepository(UserRepository):
             ).scalar_one_or_none()
             if role_id:
                 self._session.execute(
-                    text('INSERT INTO user_roles ("userId", "roleId") VALUES (:user_id, :role_id)'),
+                    text('INSERT INTO user_roles (user_id, role_id) VALUES (:user_id, :role_id)'),
                     {"user_id": user_id, "role_id": role_id},
                 )
                 assigned_role = role_name

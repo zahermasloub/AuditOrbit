@@ -34,6 +34,8 @@ services:
       JWT_SECRET: devsecret
       WEB_ORIGIN: http://localhost:3000
       WEB_ORIGINS: http://localhost:3000
+      # Development bypass - Remove in production!
+      AUTH_BYPASS_USER_ID: ${AUTH_BYPASS_USER_ID:-}
     depends_on:
       - db
       - redis
