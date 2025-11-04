@@ -1,0 +1,579 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Plus, Calendar, Target, Edit, Trash2, Eye, CheckCircle2, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
+import { 
+  getAllAnnualPlans, 
+  createAnnualPlan, 
+  updateAnnualPlan, 
+  deleteAnnualPlan,
+  getAnnualPlanStats,
+  getStatusColor,
+  getStatusLabel,
+  canEditPlan,
+  canDeletePlan,
+  type AnnualPlan, 
+  type AnnualPlanCreate,
+  type AnnualPlanUpdate
+} from "@/lib/api/annual-plans"
+
+type DialogState = {
+  type: 'create' | 'edit' | 'view' | null
+  plan?: AnnualPlan
+}
+
+export function AnnualPlansSection() {
+  const [plans, setPlans] = useState<AnnualPlan[]>([])
+  const [loading, setLoading] = useState(true)
+  const [dialogState, setDialogState] = useState<DialogState>({ type: null })
+  const [formData, setFormData] = useState<AnnualPlanCreate>({
+    name: "",
+    year: new Date().getFullYear(),
+    status: "draft",
+    total_planned_hours: 0,
+    description: "",
+    departments: []
+  })
+  const [newDepartment, setNewDepartment] = useState("")
+  const { toast } = useToast()
+
+  useEffect(() => {
+    loadPlans()
+  }, [])
+
+  const loadPlans = async () => {
+    try {
+      setLoading(true)
+      const data = await getAllAnnualPlans()
+      setPlans(data.items) // تعديل هنا لاستخدام مصفوفة الخطط فقط
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل تحميل الخطط السنوية",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleCreate = async () => {
+    try {
+      await createAnnualPlan(formData)
+      toast({
+        title: "نجح",
+        description: "تم إنشاء الخطة السنوية بنجاح"
+      })
+      setDialogState({ type: null })
+      resetForm()
+      loadPlans()
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل إنشاء الخطة السنوية",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleUpdate = async () => {
+    if (!dialogState.plan) return
+    
+    try {
+      const updateData: AnnualPlanUpdate = {
+        name: formData.name,
+        year: formData.year,
+        status: formData.status,
+        total_planned_hours: formData.total_planned_hours,
+        description: formData.description,
+        departments: formData.departments
+      }
+      
+      await updateAnnualPlan(dialogState.plan.id, updateData)
+      toast({
+        title: "نجح",
+        description: "تم تحديث الخطة السنوية بنجاح"
+      })
+      setDialogState({ type: null })
+      resetForm()
+      loadPlans()
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل تحديث الخطة السنوية",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("هل أنت متأكد من حذف هذه الخطة؟ سيتم حذف جميع المهام المرتبطة بها.")) {
+      return
+    }
+
+    try {
+      await deleteAnnualPlan(id)
+      toast({
+        title: "نجح",
+        description: "تم حذف الخطة السنوية بنجاح"
+      })
+      loadPlans()
+    } catch (error) {
+      toast({
+        title: "خطأ",
+        description: "فشل حذف الخطة السنوية",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const openCreateDialog = () => {
+    resetForm()
+    setDialogState({ type: 'create' })
+  }
+
+  const openEditDialog = (plan: AnnualPlan) => {
+    setFormData({
+      name: plan.name,
+      year: plan.year,
+      status: plan.status,
+      total_planned_hours: plan.total_planned_hours,
+      description: plan.description || "",
+      departments: plan.departments || []
+    })
+    setDialogState({ type: 'edit', plan })
+  }
+
+  const openViewDialog = (plan: AnnualPlan) => {
+    setDialogState({ type: 'view', plan })
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      year: new Date().getFullYear(),
+      status: "draft",
+      total_planned_hours: 0,
+      description: "",
+      departments: []
+    })
+    setNewDepartment("")
+  }
+
+  const addDepartment = () => {
+    if (newDepartment.trim() && !formData.departments.includes(newDepartment.trim())) {
+      setFormData({
+        ...formData,
+        departments: [...formData.departments, newDepartment.trim()]
+      })
+      setNewDepartment("")
+    }
+  }
+
+  const removeDepartment = (dept: string) => {
+    setFormData({
+      ...formData,
+      departments: formData.departments.filter(d => d !== dept)
+    })
+  }
+
+  const stats = getAnnualPlanStats(plans)
+
+  if (loading) {
+    return <div className="text-center py-8">جاري التحميل...</div>
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">إجمالي الخطط</p>
+                <p className="text-2xl font-bold">{stats.total}</p>
+              </div>
+              <Target className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">نشطة</p>
+                <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+              </div>
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">مسودة</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.draft}</p>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">إجمالي الساعات</p>
+                <p className="text-2xl font-bold">{stats.totalHours.toLocaleString()}</p>
+              </div>
+              <Calendar className="h-8 w-8 text-muted-foreground" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">الخطط السنوية</h2>
+        <Button onClick={openCreateDialog}>
+          <Plus className="ml-2 h-4 w-4" />
+          إضافة خطة سنوية
+        </Button>
+      </div>
+
+      {plans.length === 0 ? (
+        <Card>
+          <CardContent className="py-8 text-center text-muted-foreground">
+            لا توجد خطط سنوية. ابدأ بإنشاء خطة جديدة.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {plans.map((plan) => (
+            <Card key={plan.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{plan.name}</h3>
+                      <p className="text-sm text-muted-foreground">السنة: {plan.year}</p>
+                    </div>
+                    <Badge variant="outline" style={{ 
+                      backgroundColor: getStatusColor(plan.status) + '20',
+                      borderColor: getStatusColor(plan.status),
+                      color: getStatusColor(plan.status)
+                    }}>
+                      {getStatusLabel(plan.status)}
+                    </Badge>
+                  </div>
+
+                  {plan.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {plan.description}
+                    </p>
+                  )}
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">الساعات المخططة:</span>
+                      <span className="font-medium">{plan.total_planned_hours.toLocaleString()}</span>
+                    </div>
+                    {plan.total_engagements !== undefined && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">عدد المهام:</span>
+                        <span className="font-medium">{plan.total_engagements}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {plan.departments && plan.departments.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {plan.departments.map((dept, idx) => (
+                        <Badge key={idx} variant="secondary" className="text-xs">
+                          {dept}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2 pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openViewDialog(plan)}
+                      className="flex-1"
+                    >
+                      <Eye className="ml-1 h-4 w-4" />
+                      عرض
+                    </Button>
+                    {canEditPlan(plan) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(plan)}
+                        className="flex-1"
+                      >
+                        <Edit className="ml-1 h-4 w-4" />
+                        تعديل
+                      </Button>
+                    )}
+                    {canDeletePlan(plan) && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(plan.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Dialog 
+        open={dialogState.type === 'create' || dialogState.type === 'edit'} 
+        onOpenChange={(open) => !open && setDialogState({ type: null })}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {dialogState.type === 'create' ? 'إنشاء خطة سنوية جديدة' : 'تعديل الخطة السنوية'}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogState.type === 'create' 
+                ? 'أدخل تفاصيل الخطة السنوية الجديدة'
+                : 'قم بتحديث تفاصيل الخطة السنوية'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">اسم الخطة *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="مثال: خطة التدقيق السنوية 2025"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="year">السنة *</Label>
+                <Input
+                  id="year"
+                  type="number"
+                  value={formData.year}
+                  onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                  min={2020}
+                  max={2100}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="status">الحالة *</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => setFormData({ ...formData, status: value as any })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="draft">مسودة</SelectItem>
+                    <SelectItem value="active">نشطة</SelectItem>
+                    <SelectItem value="completed">مكتملة</SelectItem>
+                    <SelectItem value="archived">مؤرشفة</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="total_planned_hours">إجمالي الساعات المخططة *</Label>
+              <Input
+                id="total_planned_hours"
+                type="number"
+                value={formData.total_planned_hours}
+                onChange={(e) => setFormData({ ...formData, total_planned_hours: parseInt(e.target.value) || 0 })}
+                min={0}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">الوصف</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="وصف تفصيلي للخطة السنوية..."
+                rows={4}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>الأقسام</Label>
+              <div className="flex gap-2">
+                <Input
+                  value={newDepartment}
+                  onChange={(e) => setNewDepartment(e.target.value)}
+                  placeholder="أضف قسم جديد"
+                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addDepartment())}
+                />
+                <Button type="button" onClick={addDepartment} variant="outline">
+                  إضافة
+                </Button>
+              </div>
+              {formData.departments.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.departments.map((dept, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-sm">
+                      {dept}
+                      <button
+                        type="button"
+                        onClick={() => removeDepartment(dept)}
+                        className="mr-2 hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setDialogState({ type: null })}
+              >
+                إلغاء
+              </Button>
+              <Button
+                onClick={dialogState.type === 'create' ? handleCreate : handleUpdate}
+                disabled={!formData.name || !formData.year}
+              >
+                {dialogState.type === 'create' ? 'إنشاء' : 'حفظ التغييرات'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog 
+        open={dialogState.type === 'view'} 
+        onOpenChange={(open) => !open && setDialogState({ type: null })}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{dialogState.plan?.name}</DialogTitle>
+            <DialogDescription>تفاصيل الخطة السنوية</DialogDescription>
+          </DialogHeader>
+
+          {dialogState.plan && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">السنة</Label>
+                  <p className="font-medium">{dialogState.plan.year}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">الحالة</Label>
+                  <div className="mt-1">
+                    <Badge variant="outline" style={{ 
+                      backgroundColor: getStatusColor(dialogState.plan.status) + '20',
+                      borderColor: getStatusColor(dialogState.plan.status),
+                      color: getStatusColor(dialogState.plan.status)
+                    }}>
+                      {getStatusLabel(dialogState.plan.status)}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {dialogState.plan.description && (
+                <div>
+                  <Label className="text-muted-foreground">الوصف</Label>
+                  <p className="mt-1">{dialogState.plan.description}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">الساعات المخططة</Label>
+                  <p className="font-medium text-lg">{dialogState.plan.total_planned_hours.toLocaleString()}</p>
+                </div>
+                {dialogState.plan.total_engagements !== undefined && (
+                  <div>
+                    <Label className="text-muted-foreground">عدد المهام</Label>
+                    <p className="font-medium text-lg">{dialogState.plan.total_engagements}</p>
+                  </div>
+                )}
+              </div>
+
+              {dialogState.plan.departments && dialogState.plan.departments.length > 0 && (
+                <div>
+                  <Label className="text-muted-foreground">الأقسام</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {dialogState.plan.departments.map((dept, idx) => (
+                      <Badge key={idx} variant="secondary">
+                        {dept}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {dialogState.plan.approved_by && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground">تمت الموافقة بواسطة</Label>
+                    <p className="font-medium">{dialogState.plan.approved_by}</p>
+                  </div>
+                  {dialogState.plan.approved_date && (
+                    <div>
+                      <Label className="text-muted-foreground">تاريخ الموافقة</Label>
+                      <p className="font-medium">
+                        {new Date(dialogState.plan.approved_date).toLocaleDateString('ar-SA')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setDialogState({ type: null })}
+                >
+                  إغلاق
+                </Button>
+                {canEditPlan(dialogState.plan) && (
+                  <Button onClick={() => openEditDialog(dialogState.plan!)}>
+                    <Edit className="ml-2 h-4 w-4" />
+                    تعديل
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
