@@ -20,6 +20,9 @@ class EngagementOut(BaseModel):
   start_date: Optional[str] = None
   end_date: Optional[str] = None
   created_at: str
+  responsible_auditor_id: Optional[str] = None
+  estimated_hours: int = 0
+  actual_hours: int = 0
 
 
 class PageOut(BaseModel):

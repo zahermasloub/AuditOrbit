@@ -15,3 +15,6 @@ class Engagement:
     start_date: Optional[str]
     end_date: Optional[str]
     created_at: str
+    responsible_auditor_id: Optional[str] = None
+    estimated_hours: int = 0
+    actual_hours: int = 0

@@ -1,424 +1,471 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Calendar, Target, Edit, Trash2, Eye, CheckCircle2, Clock } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Progress } from "@/components/ui/progress"
+import { Badge } from "@/components/ui/badge"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Calendar, Plus, FileText, Clock, AlertTriangle, Building2, Target } from 'lucide-react'
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
-interface AnnualPlan {
-  id: number
-  year: string
-  title: string
-  description: string
-  status: "draft" | "approved" | "in-progress" | "completed"
-  totalEngagements: number
-  completedEngagements: number
-  riskBasedHours: number
-  actualHours: number
-  approvedBy: string
-  approvedDate: string
-  departments: string[]
+interface Department {
+  id: string
+  name: string
+  priority?: 'high' | 'medium' | 'low'
 }
 
-export function AnnualPlansSection() {
-  const [plans, setPlans] = useState<AnnualPlan[]>([
-    {
-      id: 1,
-      year: "2025",
-      title: "الخطة السنوية للتدقيق الداخلي 2025",
-      description: "خطة تدقيق شاملة قائمة على المخاطر تغطي جميع الإدارات الحرجة",
-      status: "in-progress",
-      totalEngagements: 24,
-      completedEngagements: 8,
-      riskBasedHours: 2400,
-      actualHours: 850,
-      approvedBy: "لجنة التدقيق",
-      approvedDate: "2025-01-15",
-      departments: ["المالية", "المشتريات", "تقنية المعلومات", "الموارد البشرية", "العمليات"],
-    },
-    {
-      id: 2,
-      year: "2024",
-      title: "الخطة السنوية للتدقيق الداخلي 2024",
-      description: "خطة تدقيق سنوية مع التركيز على الضوابط المالية والتشغيلية",
-      status: "completed",
-      totalEngagements: 20,
-      completedEngagements: 20,
-      riskBasedHours: 2200,
-      actualHours: 2150,
-      approvedBy: "لجنة التدقيق",
-      approvedDate: "2024-01-10",
-      departments: ["المالية", "المشتريات", "العمليات"],
-    },
-  ])
+interface AnnualPlan {
+  id: string
+  title: string
+  description: string
+  startDate: string
+  endDate: string
+  targetDepartments: Department[]
+  vacationStartDate: string
+  vacationEndDate: string
+  totalEngagements: number
+  riskBasedHours: number
+  status: string
+  createdAt: string
+}
 
-  const [showCreateDialog, setShowCreateDialog] = useState(false)
-  const [showViewDialog, setShowViewDialog] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<AnnualPlan | null>(null)
-  const [formData, setFormData] = useState({
-    year: "",
+const mockDepartments: Department[] = [
+  { id: "1", name: "الإدارة المالية" },
+  { id: "2", name: "إدارة الموارد البشرية" },
+  { id: "3", name: "إدارة تقنية المعلومات" },
+  { id: "4", name: "إدارة المشتريات" },
+  { id: "5", name: "إدارة العمليات" },
+  { id: "6", name: "إدارة المبيعات" },
+]
+
+const mockPlans: AnnualPlan[] = [
+  {
+    id: "1",
+    title: "خطة التدقيق السنوية 2024",
+    description: "خطة التدقيق الشاملة للعام المالي 2024",
+    startDate: "2024-01-01",
+    endDate: "2024-12-31",
+    targetDepartments: [
+      { id: "1", name: "الإدارة المالية", priority: "high" },
+      { id: "2", name: "إدارة الموارد البشرية", priority: "medium" },
+    ],
+    vacationStartDate: "2024-07-01",
+    vacationEndDate: "2024-07-31",
+    totalEngagements: 12,
+    riskBasedHours: 2400,
+    status: "active",
+    createdAt: "2024-01-01",
+  },
+]
+
+export function AnnualPlansSection() {
+  const [plans, setPlans] = useState<AnnualPlan[]>(mockPlans)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [selectedDepartments, setSelectedDepartments] = useState<Department[]>([])
+  const [newPlan, setNewPlan] = useState({
     title: "",
     description: "",
-    totalEngagements: "",
-    riskBasedHours: "",
+    startDate: "",
+    endDate: "",
+    vacationStartDate: "",
+    vacationEndDate: "",
+    totalEngagements: 0,
+    riskBasedHours: 0,
   })
 
-  const handleCreatePlan = () => {
-    const newPlan: AnnualPlan = {
-      id: plans.length + 1,
-      year: formData.year,
-      title: formData.title,
-      description: formData.description,
+  const handleAddDepartment = (deptId: string) => {
+    const dept = mockDepartments.find(d => d.id === deptId)
+    if (dept && !selectedDepartments.find(d => d.id === deptId)) {
+      setSelectedDepartments([...selectedDepartments, { ...dept, priority: 'medium' }])
+    }
+  }
+
+  const handleRemoveDepartment = (deptId: string) => {
+    setSelectedDepartments(selectedDepartments.filter(d => d.id !== deptId))
+  }
+
+  const handlePriorityChange = (deptId: string, priority: 'high' | 'medium' | 'low') => {
+    setSelectedDepartments(
+      selectedDepartments.map(d => 
+        d.id === deptId ? { ...d, priority } : d
+      )
+    )
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    const plan: AnnualPlan = {
+      id: Date.now().toString(),
+      ...newPlan,
+      targetDepartments: selectedDepartments,
       status: "draft",
-      totalEngagements: Number.parseInt(formData.totalEngagements),
-      completedEngagements: 0,
-      riskBasedHours: Number.parseInt(formData.riskBasedHours),
-      actualHours: 0,
-      approvedBy: "",
-      approvedDate: "",
-      departments: [],
+      createdAt: new Date().toISOString(),
     }
-    setPlans([newPlan, ...plans])
-    setShowCreateDialog(false)
-    setFormData({ year: "", title: "", description: "", totalEngagements: "", riskBasedHours: "" })
+    
+    setPlans([...plans, plan])
+    setIsDialogOpen(false)
+    setNewPlan({
+      title: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      vacationStartDate: "",
+      vacationEndDate: "",
+      totalEngagements: 0,
+      riskBasedHours: 0,
+    })
+    setSelectedDepartments([])
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "draft":
-        return "bg-slate-500/20 text-slate-300 border-slate-500/30"
-      case "approved":
-        return "bg-cyan-500/20 text-cyan-300 border-cyan-500/30"
-      case "in-progress":
-        return "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
-      case "completed":
-        return "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
-      default:
-        return ""
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case 'high': return 'bg-red-500/10 text-red-500 border-red-500/20'
+      case 'medium': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+      case 'low': return 'bg-green-500/10 text-green-500 border-green-500/20'
+      default: return 'bg-slate-500/10 text-slate-400 border-slate-500/20'
     }
   }
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "draft":
-        return "مسودة"
-      case "approved":
-        return "معتمد"
-      case "in-progress":
-        return "قيد التنفيذ"
-      case "completed":
-        return "مكتمل"
-      default:
-        return status
+  const getPriorityLabel = (priority?: string) => {
+    switch (priority) {
+      case 'high': return 'عالية'
+      case 'medium': return 'متوسطة'
+      case 'low': return 'منخفضة'
+      default: return 'غير محدد'
     }
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-2xl font-bold text-white">الخطط السنوية للتدقيق</h3>
-          <p className="text-slate-400 mt-1">إدارة الخطط السنوية القائمة على المخاطر</p>
+          <h2 className="text-2xl font-bold text-slate-100">الخطط السنوية</h2>
+          <p className="text-slate-400 mt-1">إدارة خطط التدقيق السنوية</p>
         </div>
-        <Button
-          onClick={() => setShowCreateDialog(true)}
-          className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
-        >
-          <Plus className="h-4 w-4 ml-2" />
-          خطة جديدة
-        </Button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">إجمالي الخطط</p>
-                <p className="text-3xl font-bold text-white">{plans.length}</p>
-              </div>
-              <Calendar className="h-10 w-10 text-indigo-400" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">المهام المخططة</p>
-                <p className="text-3xl font-bold text-white">
-                  {plans.reduce((sum, plan) => sum + plan.totalEngagements, 0)}
-                </p>
-              </div>
-              <Target className="h-10 w-10 text-cyan-400" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">المهام المكتملة</p>
-                <p className="text-3xl font-bold text-white">
-                  {plans.reduce((sum, plan) => sum + plan.completedEngagements, 0)}
-                </p>
-              </div>
-              <CheckCircle2 className="h-10 w-10 text-emerald-400" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900 border-slate-800">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-slate-400">الساعات المخططة</p>
-                <p className="text-3xl font-bold text-white">
-                  {plans.reduce((sum, plan) => sum + plan.riskBasedHours, 0)}
-                </p>
-              </div>
-              <Clock className="h-10 w-10 text-orange-400" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Plans List */}
-      <div className="space-y-4">
-        {plans.map((plan) => (
-          <Card key={plan.id} className="bg-slate-900 border-slate-800 hover:border-indigo-500/50 transition-colors">
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h4 className="text-xl font-semibold text-white">{plan.title}</h4>
-                    <Badge className={getStatusColor(plan.status)}>{getStatusLabel(plan.status)}</Badge>
-                  </div>
-                  <p className="text-slate-400 text-sm mb-3">{plan.description}</p>
-                  {plan.departments.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {plan.departments.map((dept, idx) => (
-                        <Badge key={idx} variant="outline" className="border-slate-600 text-slate-300">
-                          {dept}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setSelectedPlan(plan)
-                      setShowViewDialog(true)
-                    }}
-                    className="text-slate-400 hover:text-white"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-white">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div className="p-3 bg-slate-800/50 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">المهام</p>
-                  <p className="text-lg font-semibold text-white">
-                    {plan.completedEngagements} / {plan.totalEngagements}
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-800/50 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">الساعات</p>
-                  <p className="text-lg font-semibold text-white">
-                    {plan.actualHours} / {plan.riskBasedHours}
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-800/50 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">معتمد من</p>
-                  <p className="text-lg font-semibold text-white">{plan.approvedBy || "-"}</p>
-                </div>
-                <div className="p-3 bg-slate-800/50 rounded-lg">
-                  <p className="text-xs text-slate-400 mb-1">تاريخ الاعتماد</p>
-                  <p className="text-lg font-semibold text-white">{plan.approvedDate || "-"}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-400">نسبة الإنجاز</span>
-                  <span className="text-white font-medium">
-                    {Math.round((plan.completedEngagements / plan.totalEngagements) * 100)}%
-                  </span>
-                </div>
-                <Progress value={(plan.completedEngagements / plan.totalEngagements) * 100} className="h-2" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Create Plan Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">إنشاء خطة سنوية جديدة</DialogTitle>
-            <DialogDescription className="text-slate-400">أدخل تفاصيل الخطة السنوية للتدقيق الداخلي</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="year" className="text-slate-300">
-                  السنة
-                </Label>
-                <Input
-                  id="year"
-                  placeholder="2025"
-                  value={formData.year}
-                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="totalEngagements" className="text-slate-300">
-                  عدد المهام المخططة
-                </Label>
-                <Input
-                  id="totalEngagements"
-                  type="number"
-                  placeholder="24"
-                  value={formData.totalEngagements}
-                  onChange={(e) => setFormData({ ...formData, totalEngagements: e.target.value })}
-                  className="bg-slate-800 border-slate-700 text-white"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="title" className="text-slate-300">
-                عنوان الخطة
-              </Label>
-              <Input
-                id="title"
-                placeholder="الخطة السنوية للتدقيق الداخلي 2025"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-slate-300">
-                الوصف
-              </Label>
-              <Textarea
-                id="description"
-                placeholder="وصف شامل للخطة السنوية..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white min-h-24"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="riskBasedHours" className="text-slate-300">
-                الساعات المخططة
-              </Label>
-              <Input
-                id="riskBasedHours"
-                type="number"
-                placeholder="2400"
-                value={formData.riskBasedHours}
-                onChange={(e) => setFormData({ ...formData, riskBasedHours: e.target.value })}
-                className="bg-slate-800 border-slate-700 text-white"
-              />
-            </div>
-          </div>
-          <div className="flex gap-3 mt-6">
-            <Button
-              onClick={handleCreatePlan}
-              className="flex-1 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
-            >
-              إنشاء الخطة
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700">
+              <Plus className="h-4 w-4 ml-2" />
+              خطة جديدة
             </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateDialog(false)}
-              className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 bg-transparent"
-            >
-              إلغاء
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Plan Dialog */}
-      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="bg-slate-900 border-slate-800 text-white max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl">{selectedPlan?.title}</DialogTitle>
-            <DialogDescription className="text-slate-400">{selectedPlan?.description}</DialogDescription>
-          </DialogHeader>
-          {selectedPlan && (
-            <div className="space-y-6 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="bg-slate-800 border-slate-700">
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-slate-400 mb-1">السنة</p>
-                    <p className="text-2xl font-bold text-white">{selectedPlan.year}</p>
-                  </CardContent>
-                </Card>
-                <Card className="bg-slate-800 border-slate-700">
-                  <CardContent className="pt-4">
-                    <p className="text-sm text-slate-400 mb-1">الحالة</p>
-                    <Badge className={getStatusColor(selectedPlan.status)}>{getStatusLabel(selectedPlan.status)}</Badge>
-                  </CardContent>
-                </Card>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+          </DialogTrigger>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-slate-900 border-slate-800">
+            <DialogHeader>
+              <DialogTitle className="text-xl text-slate-100">إنشاء خطة تدقيق سنوية جديدة</DialogTitle>
+              <DialogDescription className="text-slate-400">
+                أدخل تفاصيل الخطة السنوية والإدارات المستهدفة
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+              {/* معلومات أساسية */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  المعلومات الأساسية
+                </h3>
+                
                 <div className="space-y-2">
-                  <p className="text-sm text-slate-400">المهام المكتملة</p>
-                  <p className="text-xl font-semibold text-white">
-                    {selectedPlan.completedEngagements} / {selectedPlan.totalEngagements}
-                  </p>
-                  <Progress
-                    value={(selectedPlan.completedEngagements / selectedPlan.totalEngagements) * 100}
-                    className="h-2"
+                  <Label htmlFor="title" className="text-slate-300">عنوان الخطة *</Label>
+                  <Input
+                    id="title"
+                    value={newPlan.title}
+                    onChange={(e) => setNewPlan({ ...newPlan, title: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-slate-100"
+                    placeholder="مثال: خطة التدقيق السنوية 2024"
+                    required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <p className="text-sm text-slate-400">الساعات المستخدمة</p>
-                  <p className="text-xl font-semibold text-white">
-                    {selectedPlan.actualHours} / {selectedPlan.riskBasedHours}
-                  </p>
-                  <Progress value={(selectedPlan.actualHours / selectedPlan.riskBasedHours) * 100} className="h-2" />
+                  <Label htmlFor="description" className="text-slate-300">الوصف *</Label>
+                  <Textarea
+                    id="description"
+                    value={newPlan.description}
+                    onChange={(e) => setNewPlan({ ...newPlan, description: e.target.value })}
+                    className="bg-slate-800 border-slate-700 text-slate-100 min-h-[100px]"
+                    placeholder="وصف تفصيلي للخطة السنوية..."
+                    required
+                  />
                 </div>
               </div>
-              {selectedPlan.departments.length > 0 && (
-                <div>
-                  <p className="text-sm text-slate-400 mb-2">الإدارات المشمولة</p>
+
+              {/* فترة الخطة */}
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  فترة الخطة
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate" className="text-slate-300">تاريخ البداية *</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={newPlan.startDate}
+                      onChange={(e) => setNewPlan({ ...newPlan, startDate: e.target.value })}
+                      className="bg-slate-800 border-slate-700 text-slate-100"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate" className="text-slate-300">تاريخ النهاية *</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={newPlan.endDate}
+                      onChange={(e) => setNewPlan({ ...newPlan, endDate: e.target.value })}
+                      className="bg-slate-800 border-slate-700 text-slate-100"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* الإدارات المستهدفة */}
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  الإدارات المستهدفة
+                </h3>
+                
+                <div className="space-y-2">
+                  <Label className="text-slate-300">إضافة إدارة</Label>
+                  <Select onValueChange={handleAddDepartment}>
+                    <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-100">
+                      <SelectValue placeholder="اختر إدارة..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {mockDepartments
+                        .filter(dept => !selectedDepartments.find(d => d.id === dept.id))
+                        .map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id} className="text-slate-100">
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedDepartments.length > 0 && (
+                  <div className="space-y-3 mt-4">
+                    {selectedDepartments.map((dept) => (
+                      <div key={dept.id} className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-slate-700">
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-slate-200">{dept.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-slate-400">الأولوية:</Label>
+                          <Select
+                            value={dept.priority}
+                            onValueChange={(value: 'high' | 'medium' | 'low') => 
+                              handlePriorityChange(dept.id, value)
+                            }
+                          >
+                            <SelectTrigger className="w-[120px] h-8 bg-slate-900 border-slate-700 text-slate-100">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-slate-800 border-slate-700">
+                              <SelectItem value="high" className="text-slate-100">عالية</SelectItem>
+                              <SelectItem value="medium" className="text-slate-100">متوسطة</SelectItem>
+                              <SelectItem value="low" className="text-slate-100">منخفضة</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Badge className={getPriorityColor(dept.priority)}>
+                            {getPriorityLabel(dept.priority)}
+                          </Badge>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveDepartment(dept.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        >
+                          إزالة
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* فترة الإجازة السنوية */}
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  فترة الإجازة السنوية
+                </h3>
+                
+                <Alert className="bg-amber-500/10 border-amber-500/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <AlertDescription className="text-amber-200 text-sm">
+                    لن يتم السماح بجدولة أي مهام تدقيقية خلال فترة الإجازة المحددة
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vacationStartDate" className="text-slate-300">بداية الإجازة</Label>
+                    <Input
+                      id="vacationStartDate"
+                      type="date"
+                      value={newPlan.vacationStartDate}
+                      onChange={(e) => setNewPlan({ ...newPlan, vacationStartDate: e.target.value })}
+                      className="bg-slate-800 border-slate-700 text-slate-100"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="vacationEndDate" className="text-slate-300">نهاية الإجازة</Label>
+                    <Input
+                      id="vacationEndDate"
+                      type="date"
+                      value={newPlan.vacationEndDate}
+                      onChange={(e) => setNewPlan({ ...newPlan, vacationEndDate: e.target.value })}
+                      className="bg-slate-800 border-slate-700 text-slate-100"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* معلومات إضافية */}
+              <div className="space-y-4 pt-4 border-t border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  معلومات إضافية
+                </h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="totalEngagements" className="text-slate-300">عدد المهام المتوقعة</Label>
+                    <Input
+                      id="totalEngagements"
+                      type="number"
+                      value={newPlan.totalEngagements}
+                      onChange={(e) => setNewPlan({ ...newPlan, totalEngagements: parseInt(e.target.value) || 0 })}
+                      className="bg-slate-800 border-slate-700 text-slate-100"
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="riskBasedHours" className="text-slate-300">ساعات التدقيق المقدرة</Label>
+                    <Input
+                      id="riskBasedHours"
+                      type="number"
+                      value={newPlan.riskBasedHours}
+                      onChange={(e) => setNewPlan({ ...newPlan, riskBasedHours: parseInt(e.target.value) || 0 })}
+                      className="bg-slate-800 border-slate-700 text-slate-100"
+                      min="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                  className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                >
+                  إلغاء
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-700 hover:to-cyan-700"
+                >
+                  إنشاء الخطة
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="grid gap-4">
+        {plans.map((plan) => (
+          <Card key={plan.id} className="bg-slate-900 border-slate-800">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-slate-100">{plan.title}</CardTitle>
+                  <CardDescription className="text-slate-400">{plan.description}</CardDescription>
+                </div>
+                <Badge className="bg-indigo-500/10 text-indigo-400 border-indigo-500/20">
+                  {plan.status === 'active' ? 'نشطة' : 'مسودة'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-400">الفترة</p>
+                  <p className="text-sm text-slate-200">
+                    {new Date(plan.startDate).toLocaleDateString('ar-SA')} - {new Date(plan.endDate).toLocaleDateString('ar-SA')}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-400">عدد المهام</p>
+                  <p className="text-sm text-slate-200">{plan.totalEngagements}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-400">ساعات التدقيق</p>
+                  <p className="text-sm text-slate-200">{plan.riskBasedHours}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-slate-400">الإدارات المستهدفة</p>
+                  <p className="text-sm text-slate-200">{plan.targetDepartments.length}</p>
+                </div>
+              </div>
+              
+              {plan.targetDepartments.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                  <p className="text-xs text-slate-400 mb-2">الإدارات:</p>
                   <div className="flex flex-wrap gap-2">
-                    {selectedPlan.departments.map((dept, idx) => (
-                      <Badge key={idx} variant="outline" className="border-slate-600 text-slate-300">
-                        {dept}
+                    {plan.targetDepartments.map((dept) => (
+                      <Badge key={dept.id} className={getPriorityColor(dept.priority)}>
+                        {dept.name} - {getPriorityLabel(dept.priority)}
                       </Badge>
                     ))}
                   </div>
                 </div>
               )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+              {plan.vacationStartDate && plan.vacationEndDate && (
+                <div className="mt-4 pt-4 border-t border-slate-800">
+                  <Alert className="bg-amber-500/10 border-amber-500/20">
+                    <Clock className="h-4 w-4 text-amber-500" />
+                    <AlertDescription className="text-amber-200 text-sm">
+                      فترة الإجازة: {new Date(plan.vacationStartDate).toLocaleDateString('ar-SA')} - {new Date(plan.vacationEndDate).toLocaleDateString('ar-SA')}
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   )
 }

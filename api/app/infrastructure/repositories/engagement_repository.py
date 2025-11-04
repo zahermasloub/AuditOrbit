@@ -45,6 +45,9 @@ class SqlAlchemyEngagementRepository(EngagementRepository):
                     e.status::text AS status,
                     to_char(e.start_date, 'YYYY-MM-DD') AS start_date,
                     to_char(e.end_date, 'YYYY-MM-DD') AS end_date,
+                    e.responsible_auditor_id::text AS responsible_auditor_id,
+                    COALESCE(e.estimated_hours, 0) AS estimated_hours,
+                    COALESCE(e.actual_hours, 0) AS actual_hours,
                     to_char(e.created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
                 FROM engagements e
                 {where_sql}
@@ -102,7 +105,7 @@ class SqlAlchemyEngagementRepository(EngagementRepository):
                     start_date, end_date, status, created_at
                 ) VALUES (
                     :id, :plan_id, :title, :scope, COALESCE(:risk_rating, 'medium'),
-                    CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'planned', CURRENT_TIMESTAMP
+                    CURRENT_DATE, CURRENT_DATE + INTERVAL '30 days', 'scheduled', CURRENT_TIMESTAMP
                 )
                 RETURNING
                     id::text AS id,
@@ -113,6 +116,9 @@ class SqlAlchemyEngagementRepository(EngagementRepository):
                     status::text AS status,
                     to_char(start_date, 'YYYY-MM-DD') AS start_date,
                     to_char(end_date, 'YYYY-MM-DD') AS end_date,
+                    responsible_auditor_id::text AS responsible_auditor_id,
+                    COALESCE(estimated_hours, 0) AS estimated_hours,
+                    COALESCE(actual_hours, 0) AS actual_hours,
                     to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SSOF') AS created_at
                 """
             ),
@@ -141,5 +147,8 @@ class SqlAlchemyEngagementRepository(EngagementRepository):
             status=row.get("status"),
             start_date=row.get("start_date"),
             end_date=row.get("end_date"),
+            responsible_auditor_id=row.get("responsible_auditor_id"),
+            estimated_hours=int(row.get("estimated_hours") or 0),
+            actual_hours=int(row.get("actual_hours") or 0),
             created_at=row.get("created_at"),
         )
