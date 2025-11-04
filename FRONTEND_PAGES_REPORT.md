@@ -1,19 +1,21 @@
 # 🧭 Frontend Pages Report (Next.js App Router)
 
-Generated: 2025-10-31
+Generated: 2025-11-04 (Updated)
 
 This report enumerates all discovered UI pages under `frontend/app/**/page.tsx` and groups them by feature area. Routes are inferred from folder structure (Next.js App Router). Descriptions are inferred from names.
+
+**🔴 Update Note:** Removed 6 duplicate/placeholder pages as per optimization recommendations.
 
 ---
 
 ## Summary
 
-- Total pages: 28
+- Total pages: 22 ⬇️ (was 28)
 - Areas:
   - General: 4
-  - Admin: 10
-  - Manager: 4
-  - Auditor: 4
+  - Admin: 6 ⬇️ (was 10)
+  - Manager: 3 ⬇️ (was 4)
+  - Auditor: 3 ⬇️ (was 4)
   - Ops: 6
 - Layouts detected:
   - `frontend/app/layout.tsx`
@@ -24,7 +26,7 @@ This report enumerates all discovered UI pages under `frontend/app/**/page.tsx` 
 
 ## Routes tree (App Router)
 
-```
+```text
 /
 ├─ /login
 ├─ /dashboard
@@ -32,21 +34,15 @@ This report enumerates all discovered UI pages under `frontend/app/**/page.tsx` 
 ├─ /admin
 │  ├─ /admin/users
 │  ├─ /admin/roles
-│  ├─ /admin/engagements
-│  ├─ /admin/evidence
-│  ├─ /admin/reports
-│  ├─ /admin/notifications
 │  ├─ /admin/checklists
 │  ├─ /admin/audit-log
 │  └─ /admin/ai-lab
 ├─ /manager
 │  ├─ /manager/engagements
-│  ├─ /manager/findings
 │  └─ /manager/reports
 ├─ /auditor
 │  ├─ /auditor/tasks
-│  ├─ /auditor/checklists
-│  └─ /auditor/archive
+│  └─ /auditor/checklists
 └─ /ops
    ├─ /ops/api
    ├─ /ops/ai
@@ -54,6 +50,14 @@ This report enumerates all discovered UI pages under `frontend/app/**/page.tsx` 
    ├─ /ops/settings
    └─ /ops/storage
 ```
+
+**Removed routes:**
+- ❌ `/admin/engagements` (duplicate of manager's version)
+- ❌ `/admin/reports` (duplicate of manager's version)
+- ❌ `/admin/evidence` (placeholder)
+- ❌ `/admin/notifications` (placeholder)
+- ❌ `/manager/findings` (placeholder)
+- ❌ `/auditor/archive` (placeholder)
 
 ---
 
@@ -75,10 +79,6 @@ This report enumerates all discovered UI pages under `frontend/app/**/page.tsx` 
 | /admin              | frontend/app/admin/page.tsx                   | Admin home                     |
 | /admin/users        | frontend/app/admin/users/page.tsx             | Users management               |
 | /admin/roles        | frontend/app/admin/roles/page.tsx             | Roles management               |
-| /admin/engagements  | frontend/app/admin/engagements/page.tsx       | Audit engagements management   |
-| /admin/evidence     | frontend/app/admin/evidence/page.tsx          | Evidence/files                 |
-| /admin/reports      | frontend/app/admin/reports/page.tsx           | Admin reports                  |
-| /admin/notifications| frontend/app/admin/notifications/page.tsx     | Notifications center           |
 | /admin/checklists   | frontend/app/admin/checklists/page.tsx        | Checklists admin               |
 | /admin/audit-log    | frontend/app/admin/audit-log/page.tsx         | Audit logs                     |
 | /admin/ai-lab       | frontend/app/admin/ai-lab/page.tsx            | AI lab / experiments           |
@@ -91,7 +91,6 @@ This report enumerates all discovered UI pages under `frontend/app/**/page.tsx` 
 |-----------------------|----------------------------------------------------|------------------------|
 | /manager              | frontend/app/manager/page.tsx                      | Manager home           |
 | /manager/engagements  | frontend/app/manager/engagements/page.tsx          | Manage engagements     |
-| /manager/findings     | frontend/app/manager/findings/page.tsx             | Findings/observations  |
 | /manager/reports      | frontend/app/manager/reports/page.tsx              | Manager reports        |
 
 ---
@@ -103,7 +102,6 @@ This report enumerates all discovered UI pages under `frontend/app/**/page.tsx` 
 | /auditor              | frontend/app/auditor/page.tsx                      | Auditor home           |
 | /auditor/tasks        | frontend/app/auditor/tasks/page.tsx                | Auditor tasks          |
 | /auditor/checklists   | frontend/app/auditor/checklists/page.tsx           | Auditor checklists     |
-| /auditor/archive      | frontend/app/auditor/archive/page.tsx              | Archived items         |
 
 ---
 
