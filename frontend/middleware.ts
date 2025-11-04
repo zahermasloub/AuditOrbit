@@ -123,9 +123,10 @@ export function middleware(request: NextRequest) {
   if (AUTH_DISABLED) {
     return NextResponse.next()
   }
+  
   const { pathname } = request.nextUrl
 
-  // السماح بالمسارات العامة
+  // السماح بالمسارات العامة (يشمل /login)
   if (isPublicRoute(pathname)) {
     return NextResponse.next()
   }
@@ -135,6 +136,11 @@ export function middleware(request: NextRequest) {
 
   // إذا لم يوجد Token، إعادة التوجيه لصفحة تسجيل الدخول
   if (!token) {
+    // 🔧 FIX: تجنب إعادة التوجيه المتكرر
+    if (pathname === "/login") {
+      return NextResponse.next()
+    }
+    
     const loginUrl = new URL("/login", request.url)
     loginUrl.searchParams.set("redirect", pathname)
     return NextResponse.redirect(loginUrl)
@@ -153,6 +159,12 @@ export function middleware(request: NextRequest) {
     response.cookies.delete("auth_token")
     
     return response
+  }
+
+  // 🔧 FIX: إذا كان المستخدم مسجل دخول ويحاول الوصول لـ /login، أعد توجيهه لصفحته الرئيسية
+  if (pathname === "/login") {
+    const defaultRoute = getDefaultRouteForRole(decodedToken.role)
+    return NextResponse.redirect(new URL(defaultRoute, request.url))
   }
 
   // فحص صلاحية الوصول

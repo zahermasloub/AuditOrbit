@@ -1,14 +1,13 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Shield, Lock, Mail, Eye, EyeOff, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { apiClient, TokenManager } from "@/lib/api-client"
+import { CookieManager } from "@/lib/cookie-manager"
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
@@ -16,6 +15,21 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+
+  // 🔧 FIX: منع حلقة إعادة التوجيه - حذف Token عند دخول صفحة تسجيل الدخول
+  useEffect(() => {
+    // فحص فقط في المتصفح (Client-Side)
+    if (typeof window === 'undefined') return
+    
+    // إذا كان هناك redirect parameter في URL، احتفظ بـ Token
+    const urlParams = new URLSearchParams(window.location.search)
+    const hasRedirect = urlParams.has('redirect')
+    
+    if (!hasRedirect) {
+      // 🔧 FIX: استخدام CookieManager للحذف
+      CookieManager.clearAuth()
+    }
+  }, [])
 
   const performLogin = async (loginEmail: string, loginPassword: string, redirectPath = "/admin") => {
     const trimmedEmail = loginEmail.trim()
@@ -46,10 +60,13 @@ export default function LoginPage() {
         const tokenData = response.data as any
 
         if (tokenData.access_token) {
+          // 🔧 FIX: استخدام CookieManager لحفظ Token
           TokenManager.setToken(tokenData.access_token)
+          CookieManager.setAuthToken(tokenData.access_token)
         }
         if (tokenData.refresh_token) {
           TokenManager.setRefreshToken(tokenData.refresh_token)
+          CookieManager.setRefreshToken(tokenData.refresh_token)
         }
         if (tokenData.user) {
           localStorage.setItem("user", JSON.stringify(tokenData.user))

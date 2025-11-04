@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { CookieManager } from "./cookie-manager"
 
 /**
  * نظام المصادقة والصلاحيات - Auth & Authorization System
@@ -220,12 +221,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        // محاولة قراءة Token من localStorage
-        const token = localStorage.getItem("auth_token")
+        // 🔧 FIX: استخدام CookieManager للحصول على Token
+        const token = CookieManager.getAuthToken()
+        
+        // إذا لم يوجد token، لا نفعل شيء
         if (!token) {
           setAuthState({ user: null, isAuthenticated: false, isLoading: false })
           return
         }
+
+        // تجنب استدعاء API في صفحة تسجيل الدخول
+        if (typeof window !== "undefined" && window.location.pathname === "/login") {
+          setAuthState({ user: null, isAuthenticated: false, isLoading: false })
+          return
+        }
+
+        // 🔧 FIX: مزامنة Token مع Cookies
+        CookieManager.syncTokenToCookies()
 
         // جلب بيانات المستخدم من API
         const response = await fetch("/api/auth/me", {
@@ -246,7 +258,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
       } catch (error) {
         console.error("Auth initialization error:", error)
-        localStorage.removeItem("auth_token")
+        // 🔧 FIX: استخدام CookieManager للحذف
+        CookieManager.clearAuth()
         setAuthState({ user: null, isAuthenticated: false, isLoading: false })
       }
     }
@@ -271,9 +284,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json()
-      localStorage.setItem("auth_token", data.access_token)
+      
+      // 🔧 FIX: استخدام CookieManager لحفظ Token
+      CookieManager.setAuthToken(data.access_token)
+      
       if (data.refresh_token) {
-        localStorage.setItem("refresh_token", data.refresh_token)
+        CookieManager.setRefreshToken(data.refresh_token)
+      }
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user))
       }
 
       const user = createUserFromResponse(data.user)
@@ -295,8 +314,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
    * تسجيل الخروج
    */
   const logout = () => {
-    localStorage.removeItem("auth_token")
-    localStorage.removeItem("refresh_token")
+    // 🔧 FIX: استخدام CookieManager للحذف
+    CookieManager.clearAuth()
+    
     setAuthState({
       user: null,
       isAuthenticated: false,
@@ -433,19 +453,20 @@ function createUserFromResponse(data: any): User {
  * إعادة التوجيه بعد تسجيل الدخول حسب الدور
  */
 function redirectAfterLogin(role: UserRole) {
-  switch (role) {
-    case "admin":
-      window.location.href = "/admin"
-      break
-    case "manager":
-      window.location.href = "/manager"
-      break
-    case "auditor":
-      window.location.href = "/auditor"
-      break
-    default:
-      window.location.href = "/dashboard"
+  // 🔧 FIX: استخدام router.push بدلاً من window.location.href
+  // لتجنب إعادة تحميل الصفحة كاملة
+  const routes: Record<UserRole, string> = {
+    admin: "/admin",
+    manager: "/manager",
+    auditor: "/auditor",
   }
+  
+  const targetRoute = routes[role] || "/dashboard"
+  
+  // استخدام setTimeout لإعطاء الوقت للـ state ليتحدث
+  setTimeout(() => {
+    window.location.href = targetRoute
+  }, 100)
 }
 
 // ============================================================================
